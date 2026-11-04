@@ -1,0 +1,36 @@
+{
+  "asOf": "2026-11-04",
+  "customers": [
+    {
+      "key": "demo-customer",
+      "name": "演示客户有限公司",
+      "industry": "演示行业",
+      "region": "北京",
+      "owner": "演示用户",
+      "department": "演示部门",
+      "level": "潜力客户",
+      "date": "2026-11-01",
+      "numbered": false
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "demo-opportunity",
+      "name": "演示项目",
+      "customer": "演示客户有限公司",
+      "status": "已确认",
+      "stage": "需求确认",
+      "amount": 10000.0,
+      "actual": 0,
+      "probability": 50.0,
+      "due": "2026-12-01",
+      "signed": "",
+      "date": "2026-11-01",
+      "unit": "演示业务单元",
+      "owner": "演示用户",
+      "department": "演示部门",
+      "industry": "演示行业",
+      "region": "北京"
+    }
+  ]
+}

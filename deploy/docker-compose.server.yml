@@ -1,0 +1,110 @@
+name: feishu-interface
+
+x-risk-backend: &risk-backend
+  build:
+    context: ../src/backend
+    dockerfile: Dockerfile
+  image: enterprise-risk-backend:20261104-zhidun
+  env_file:
+    - .env
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@risk-db:5432/${POSTGRES_DB}
+    SEED_DEMO_DATA: "false"
+    TZ: Asia/Shanghai
+  volumes:
+    - risk_runtime_data:/app/data
+  restart: unless-stopped
+  networks:
+    - feishu-interface-net
+
+services:
+  risk-db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - risk_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - feishu-interface-net
+
+  risk-migrate:
+    <<: *risk-backend
+    command: ["python", "scripts/migrate_sqlite_to_postgres.py"]
+    restart: "no"
+    depends_on:
+      risk-db:
+        condition: service_healthy
+
+  risk-backend:
+    <<: *risk-backend
+    expose:
+      - "5001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      risk-migrate:
+        condition: service_completed_successfully
+
+  risk-frontend:
+    build:
+      context: ../src/frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api
+    image: enterprise-risk-frontend:20261104-zhidun
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      TZ: Asia/Shanghai
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - feishu-interface-net
+
+  customer-nginx:
+    build:
+      context: /data/feishu-interface/releases/20261027-risk-check
+      dockerfile: Gateway.Dockerfile
+    image: l2c-platform-gateway:20261027-risk-check
+    ports:
+      - "${BIND_IP:-10.126.50.207}:${CUSTOMER_PUBLIC_PORT:-8001}:80"
+    depends_on:
+      risk-backend:
+        condition: service_healthy
+      risk-frontend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - feishu-interface-net
+
+networks:
+  feishu-interface-net:
+    external: true
+    name: ${EXISTING_DOCKER_NETWORK:-feishu-interface_feishu-interface-net}
+
+volumes:
+  risk_postgres_data:
+    name: feishu-interface-risk-postgres
+  risk_runtime_data:
+    name: feishu-interface-risk-runtime

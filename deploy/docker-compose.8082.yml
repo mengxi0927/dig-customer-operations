@@ -1,0 +1,15 @@
+services:
+  risk-gateway:
+    image: l2c-platform-gateway:20261027-risk-check
+    ports:
+      - "10.126.50.207:8082:80"
+    volumes:
+      - ./nginx/zhidun.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - feishu-interface-net
+    depends_on:
+      risk-backend:
+        condition: service_healthy
+      risk-frontend:
+        condition: service_healthy
