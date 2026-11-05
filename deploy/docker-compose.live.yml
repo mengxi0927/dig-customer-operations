@@ -1,0 +1,12 @@
+# Apply after the existing server Compose files. Update only these services with --no-deps.
+services:
+  risk-frontend:
+    image: ${DIG_FRONTEND_IMAGE:?set an immutable release image}
+    env_file:
+      - .env.live
+    environment:
+      DIG_DATA_ACCESS: server
+      DIG_ALLOWED_ORIGIN: http://10.126.50.207:8082
+  risk-gateway:
+    volumes:
+      - ./nginx/zhidun.conf:/etc/nginx/conf.d/default.conf:ro

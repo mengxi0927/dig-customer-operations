@@ -1,2 +1,2 @@
-import CustomerCockpit from "@/components/customer-cockpit";
-export default function Page(){return <CustomerCockpit/>}
+import DigLiveWorkbench from '@/components/dig-live-workbench';
+export default function Page(){return <DigLiveWorkbench/>}

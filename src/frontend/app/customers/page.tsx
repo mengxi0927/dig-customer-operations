@@ -1,2 +1,2 @@
-import { redirect } from "next/navigation";
-export default function CustomersPage(){redirect("/")}
+import DigLiveWorkbench from '@/components/dig-live-workbench';
+export default function Page(){return <DigLiveWorkbench/>}

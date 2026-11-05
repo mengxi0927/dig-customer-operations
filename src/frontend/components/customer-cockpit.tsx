@@ -18,7 +18,8 @@ function region(row:CustomerRiskRow){
 const selectClass="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500";
 export default function CustomerCockpit(){
  const [data,setData]=useState<CustomerRiskList>();const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [updated,setUpdated]=useState("");
- const [keyword,setKeyword]=useState("");const [department,setDepartment]=useState("");const [risk,setRisk]=useState("");const [province,setProvince]=useState("");const [page,setPage]=useState(1);const [sort,setSort]=useState("score");
+ const [keyword,setKeyword]=useState("");
+ useEffect(()=>{setKeyword(new URLSearchParams(window.location.search).get("q")||"")},[]);const [department,setDepartment]=useState("");const [risk,setRisk]=useState("");const [province,setProvince]=useState("");const [page,setPage]=useState(1);const [sort,setSort]=useState("score");
  async function load(force=false){setLoading(true);setError("");try{setData(await api.customerRiskList("","","score","desc",force));setUpdated(new Date().toLocaleString("zh-CN"))}catch(e){setError((e as Error).message)}finally{setLoading(false)}}
  useEffect(()=>{load()},[]);
  useEffect(()=>{setPage(1)},[keyword,department,risk,province,sort]);
