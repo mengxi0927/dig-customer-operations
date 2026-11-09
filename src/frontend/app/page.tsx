@@ -1,2 +1,5 @@
-import DigLiveWorkbench from '@/components/dig-live-workbench';
-export default function Page(){return <DigLiveWorkbench/>}
+import DigPrototype from '@/components/prototype/dig-prototype';
+
+export default function Page() {
+  return <DigPrototype />;
+}

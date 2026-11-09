@@ -1,0 +1,349 @@
+/* Chinese text floor: align every legacy compact label to at least 12px. */
+.prototype.p-reference .p-agenda .p-between>span,
+.prototype.p-reference .p-agenda h3,
+.prototype.p-reference .p-agenda-item b,
+.prototype.p-reference .p-agenda-item small,
+.prototype.p-reference .p-agenda-item time,
+.prototype.p-reference .p-auto-fields,
+.prototype.p-reference .p-avatar,
+.prototype.p-reference .p-avatar.small,
+.prototype.p-reference .p-big-amount small,
+.prototype.p-reference .p-board-add,
+.prototype.p-reference .p-brand small,
+.prototype.p-reference .p-breadcrumb,
+.prototype.p-reference .p-btn,
+.prototype.p-reference .p-business-chart .p-between>span,
+.prototype.p-reference .p-business-chart b,
+.prototype.p-reference .p-business-chart p,
+.prototype.p-reference .p-business-chart small,
+.prototype.p-reference .p-checkbox-label,
+.prototype.p-reference .p-company-cell button,
+.prototype.p-reference .p-company-cell small,
+.prototype.p-reference .p-contract-link b,
+.prototype.p-reference .p-contract-link p,
+.prototype.p-reference .p-customer-hero p,
+.prototype.p-reference .p-customer-table td,
+.prototype.p-reference .p-customer-table th,
+.prototype.p-reference .p-detail-metrics small,
+.prototype.p-reference .p-detail-metrics span,
+.prototype.p-reference .p-detail-note,
+.prototype.p-reference .p-detail-timeline article h4,
+.prototype.p-reference .p-detail-timeline article p,
+.prototype.p-reference .p-detail-timeline article time,
+.prototype.p-reference .p-discover-banner .p-overline,
+.prototype.p-reference .p-discover-banner p,
+.prototype.p-reference .p-discover-banner>.p-tag,
+.prototype.p-reference .p-drawer .p-tabs>button,
+.prototype.p-reference .p-empty,
+.prototype.p-reference .p-empty-stage,
+.prototype.p-reference .p-event-list p,
+.prototype.p-reference .p-event-list small,
+.prototype.p-reference .p-eyebrow,
+.prototype.p-reference .p-footer,
+.prototype.p-reference .p-form .p-btn,
+.prototype.p-reference .p-form input::placeholder,
+.prototype.p-reference .p-form input:not([type=checkbox]),
+.prototype.p-reference .p-form label:not(.p-checkbox-label),
+.prototype.p-reference .p-form label>span,
+.prototype.p-reference .p-form select,
+.prototype.p-reference .p-form textarea,
+.prototype.p-reference .p-form textarea::placeholder,
+.prototype.p-reference .p-form-callout,
+.prototype.p-reference .p-form-callout b,
+.prototype.p-reference .p-form-callout p,
+.prototype.p-reference .p-form-hint,
+.prototype.p-reference .p-form-intro,
+.prototype.p-reference .p-free-day .p-text-btn,
+.prototype.p-reference .p-free-day p,
+.prototype.p-reference .p-full-link,
+.prototype.p-reference .p-global-search input,
+.prototype.p-reference .p-global-search kbd,
+.prototype.p-reference .p-growth-radar .p-full-link,
+.prototype.p-reference .p-growth-radar .p-tag,
+.prototype.p-reference .p-guidance,
+.prototype.p-reference .p-heading-actions .p-btn,
+.prototype.p-reference .p-health,
+.prototype.p-reference .p-health-donut span,
+.prototype.p-reference .p-help,
+.prototype.p-reference .p-help-content ol,
+.prototype.p-reference .p-help-content>p,
+.prototype.p-reference .p-inline-search input,
+.prototype.p-reference .p-intervention h3,
+.prototype.p-reference .p-intervention p,
+.prototype.p-reference .p-intervention>.p-btn,
+.prototype.p-reference .p-intro-line p,
+.prototype.p-reference .p-intro-line span,
+.prototype.p-reference .p-journey-footer > span,
+.prototype.p-reference .p-journey-footer i,
+.prototype.p-reference .p-journey-team > span:first-child,
+.prototype.p-reference .p-lead-detail p,
+.prototype.p-reference .p-lead-row h3,
+.prototype.p-reference .p-lead-row p,
+.prototype.p-reference .p-lead-row small,
+.prototype.p-reference .p-leads .p-section-title>.p-btn,
+.prototype.p-reference .p-linked-op b,
+.prototype.p-reference .p-linked-op small,
+.prototype.p-reference .p-live-indicator,
+.prototype.p-reference .p-material-checks h3,
+.prototype.p-reference .p-material-checks p,
+.prototype.p-reference .p-matrix b,
+.prototype.p-reference .p-matrix>div,
+.prototype.p-reference .p-metric strong small,
+.prototype.p-reference .p-metric-bottom,
+.prototype.p-reference .p-metric-label,
+.prototype.p-reference .p-muted,
+.prototype.p-reference .p-nav-caption,
+.prototype.p-reference .p-nav-item,
+.prototype.p-reference .p-nav-item .p-tag,
+.prototype.p-reference .p-nav-item i,
+.prototype.p-reference .p-next-contact,
+.prototype.p-reference .p-next-step p,
+.prototype.p-reference .p-next-step>span,
+.prototype.p-reference .p-notification-list b,
+.prototype.p-reference .p-notification-list p,
+.prototype.p-reference .p-numeric,
+.prototype.p-reference .p-numeric small,
+.prototype.p-reference .p-op-card h3,
+.prototype.p-reference .p-op-customer,
+.prototype.p-reference .p-op-foot,
+.prototype.p-reference .p-op-foot .p-avatar,
+.prototype.p-reference .p-op-next,
+.prototype.p-reference .p-op-stages i,
+.prototype.p-reference .p-op-stages>span,
+.prototype.p-reference .p-op-value .p-tag,
+.prototype.p-reference .p-op-value>small,
+.prototype.p-reference .p-overline,
+.prototype.p-reference .p-page-heading h1 small,
+.prototype.p-reference .p-page-heading p,
+.prototype.p-reference .p-pipeline .p-text-btn,
+.prototype.p-reference .p-pipeline-summary .p-tag,
+.prototype.p-reference .p-pipeline-summary small,
+.prototype.p-reference .p-pipeline-summary>b>small,
+.prototype.p-reference .p-pipeline-summary>span,
+.prototype.p-reference .p-poc-card b,
+.prototype.p-reference .p-poc-card p,
+.prototype.p-reference .p-poc-card>strong small,
+.prototype.p-reference .p-project-link,
+.prototype.p-reference .p-prototype-badge,
+.prototype.p-reference .p-radar-item h3,
+.prototype.p-reference .p-radar-item p,
+.prototype.p-reference .p-radar-item>span,
+.prototype.p-reference .p-radar-item>span>span,
+.prototype.p-reference .p-relation-tree article,
+.prototype.p-reference .p-relation-tree article small,
+.prototype.p-reference .p-relation-tree>div,
+.prototype.p-reference .p-relation-tree>div>small,
+.prototype.p-reference .p-relation-tree>p,
+.prototype.p-reference .p-relationship-legend button,
+.prototype.p-reference .p-relationship-summary .p-section-title p,
+.prototype.p-reference .p-relationship-summary h2,
+.prototype.p-reference .p-resource-card .p-tag,
+.prototype.p-reference .p-resource-card>.p-btn,
+.prototype.p-reference .p-resource-card>p,
+.prototype.p-reference .p-resource-case p,
+.prototype.p-reference .p-resource-case small,
+.prototype.p-reference .p-resource-person b,
+.prototype.p-reference .p-resource-person small,
+.prototype.p-reference .p-response,
+.prototype.p-reference .p-right-date>span,
+.prototype.p-reference .p-right-quote p,
+.prototype.p-reference .p-right-quote small,
+.prototype.p-reference .p-right-subtitle,
+.prototype.p-reference .p-rightbar h2,
+.prototype.p-reference .p-round-count,
+.prototype.p-reference .p-search-results button,
+.prototype.p-reference .p-search-results p,
+.prototype.p-reference .p-section-title .p-text-btn,
+.prototype.p-reference .p-section-title h2,
+.prototype.p-reference .p-section-title p,
+.prototype.p-reference .p-separate-status p,
+.prototype.p-reference .p-separate-status>span:first-child,
+.prototype.p-reference .p-sidebar-note button,
+.prototype.p-reference .p-sidebar-note p,
+.prototype.p-reference .p-sidebar:is(:hover, :has(:focus-visible)) .p-help,
+.prototype.p-reference .p-sidebar:is(:hover, :has(:focus-visible)) .p-nav-item > i,
+.prototype.p-reference .p-signal-actions .p-btn,
+.prototype.p-reference .p-signal-actions .p-text-btn,
+.prototype.p-reference .p-signal-card .p-muted,
+.prototype.p-reference .p-signal-card h3,
+.prototype.p-reference .p-signal-card>p,
+.prototype.p-reference .p-signal-detail p,
+.prototype.p-reference .p-signal-detail small,
+.prototype.p-reference .p-signal-evidence,
+.prototype.p-reference .p-small-logo,
+.prototype.p-reference .p-soft-footer,
+.prototype.p-reference .p-stage-label,
+.prototype.p-reference .p-stage-label > span:last-child,
+.prototype.p-reference .p-stage-label b,
+.prototype.p-reference .p-stage-label>span:last-child,
+.prototype.p-reference .p-support-row h3,
+.prototype.p-reference .p-support-row p,
+.prototype.p-reference .p-support-row>.p-muted,
+.prototype.p-reference .p-support-row>.p-text-btn,
+.prototype.p-reference .p-tabs button,
+.prototype.p-reference .p-tabs button span,
+.prototype.p-reference .p-tag,
+.prototype.p-reference .p-task-action,
+.prototype.p-reference .p-task-copy .p-tag,
+.prototype.p-reference .p-task-copy p,
+.prototype.p-reference .p-task-copy strong,
+.prototype.p-reference .p-task-time,
+.prototype.p-reference .p-team-avatars .p-avatar,
+.prototype.p-reference .p-team-caption,
+.prototype.p-reference .p-text-btn,
+.prototype.p-reference .p-tiny-logo,
+.prototype.p-reference .p-toast,
+.prototype.p-reference .p-top-brand strong > span,
+.prototype.p-reference .p-topnav button,
+.prototype.p-reference .p-user b,
+.prototype.p-reference .p-user small,
+.prototype.p-reference .p-user>.p-avatar,
+.prototype.p-reference .p-view-selector button,
+.prototype.p-reference .p-viewbar-right,
+.prototype.p-reference .p-viewbar-right select,
+.prototype.p-reference .p-viewbar-right>span,
+.prototype.p-reference .p-week-controls,
+.prototype.p-reference .p-week>button>b,
+.prototype.p-reference .p-week>button>span,
+.prototype.p-reference .p-workspace,
+.prototype.p-reference .p-workspace small { font-size: 12px; }
+
+/* Chinese type hierarchy: enough room for full names and next actions. */
+.prototype.p-reference {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #26354b;
+}
+.prototype.p-reference button,
+.prototype.p-reference input,
+.prototype.p-reference select,
+.prototype.p-reference textarea { font-family: inherit; }
+.prototype.p-reference .p-page-heading h1 { color: #253247; font-size: clamp(25px, 2.6vw, 32px); line-height: 1.25; letter-spacing: -.025em; }
+.prototype.p-reference :is(.p-section-title, .p-rightbar, .p-dialog-header) h2 { color: #34445a; font-size: 18px; line-height: 1.45; letter-spacing: 0; }
+.prototype.p-reference :is(.p-op-card, .p-radar-item, .p-lead-row, .p-customer-hero, .p-intervention, .p-support-row, .p-signal-card, .p-business-associations) h3 { color: #35445b; font-size: 15px; line-height: 1.5; letter-spacing: 0; }
+.prototype.p-reference h4 { font-size: 13px; line-height: 1.55; }
+.prototype.p-reference :is(.p-topnav button, .p-sidebar button, .p-tabs button, .p-btn) { font-size: 13px; line-height: 1.45; }
+.prototype.p-reference :is(.p-heading-actions, .p-form) .p-btn,
+.prototype.p-reference .p-drawer .p-tabs > button { font-size: 13px; }
+.prototype.p-reference :is(.p-btn, .p-topnav button) { min-height: 36px; }
+.prototype.p-reference .p-sidebar:not(:hover):not(:has(:focus-visible)) .p-help { font-size: 0; }
+.prototype.p-reference :is(.p-btn, .p-tag) { white-space: nowrap; }
+.prototype.p-reference .p-tag { font-size: 12px; line-height: 1.5; padding: 3px 8px; }
+.prototype.p-reference .p-tag.blue { color: #415a88; }
+.prototype.p-reference .p-tag.rose { color: #8e4545; }
+.prototype.p-reference .p-tag.sage { color: #496858; }
+.prototype.p-reference .p-tag.amber { color: #795b35; }
+.prototype.p-reference .p-tag.lilac { color: #65577d; }
+.prototype.p-reference .p-tag.neutral { color: #515d70; }
+.prototype.p-reference .p-nav-item.active .p-tag { color: #f5f7fb; }
+.prototype.p-reference :is(.p-drawer, .p-dialog) :is(input, select, textarea) { font-size: 14px; line-height: 1.55; }
+.prototype.p-reference :is(.p-rightbar h2, .p-rightbar h3) { color: #36465d; font-weight: 650; }
+.prototype.p-reference :is(.p-topnav button:not(.active), .p-workspace small, .p-user small, .p-board-context, .p-drawer small) { color: #586981; }
+.prototype.p-reference :is(.p-page-heading p, .p-section-title p, .p-task-copy p, .p-radar-item p, .p-linked-op small, .p-op-customer, .p-op-next, .p-customer-table td) { font-size: 14px; color: #52627a; }
+.prototype.p-reference :is(.p-page-heading p, .p-section-title p, .p-op-next, .p-op-customer, .p-linked-op small) { font-size: 13px; }
+.prototype.p-reference :is(.p-op-foot, .p-task-time, .p-right-subtitle, .p-tabs button:not(.selected), .p-customer-table th, .p-agenda-item small, .p-metric-bottom) { color: #566780; }
+.prototype.p-reference :is(.p-task-copy strong, .p-company-cell button, .p-linked-op b, .p-agenda-item b) { font-size: 14px; color: #35445b; font-weight: 650; }
+.prototype.p-reference .p-op-card.stalled .p-op-next { color: #8e4545; }
+.prototype.p-reference .p-op-card:hover .p-op-next { color: #f1f4fb; }
+.prototype.p-reference .p-op-next span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.prototype.p-reference .p-op-card { padding-block: 16px 14px; }
+.prototype.p-reference .p-op-card h3 { margin-block: 12px 10px; min-height: 45px; }
+.prototype.p-reference .p-section-title p { line-height: 1.65; }
+.prototype.p-reference .p-customer-table table { min-width: 680px; }
+.prototype.p-reference :is(.p-task-row, .p-customer-row, .p-op-card, .p-drawer, .p-rightbar) small { line-height: 1.55; }
+.prototype.p-reference :is(.p-task-row, .p-customer-row, .p-op-card) :is(b, strong) { line-height: 1.5; }
+.prototype.p-reference .p-numeric { color: #4e668b !important; font-size: 14px !important; font-variant-numeric: tabular-nums; }
+.prototype.p-reference .p-task-row .p-task-action {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  border-radius: 18px;
+  padding: 3px 9px;
+  color: #526888;
+  font-size: 12px;
+}
+.prototype.p-reference .p-board-scroll { margin-top: 8px; }
+.prototype.p-reference .p-board-scroll > .p-board { min-width: 836px; }
+.prototype.p-reference .p-drawer { width: min(100%, 680px); }
+
+/* Only the customer record's verified POC and project pairs share this graph. */
+.p-business-associations { margin-top: 25px; padding-top: 22px; border-top: 1px solid #dbe3f0; }
+.p-business-association-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+.p-business-association-title h3 { margin: 0; color: #26354b; }
+.p-business-association-title p { margin: 4px 0 0; color: #586981; font-size: 13px; }
+.p-business-graph { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px; isolation: isolate; }
+.p-business-node-column { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.p-business-node-column h4 { margin: 0; color: #435571; }
+.p-business-node-column article {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 11px 13px;
+  border: 1px solid #d9e2f1;
+  border-radius: 13px;
+  background: rgb(255 255 255 / 88%);
+  overflow-wrap: anywhere;
+}
+.p-business-node-column article.selected { border-color: #85a2dc; background: #f4f7fe; }
+.p-business-node-column article > b { font-size: 14px; line-height: 1.5; }
+.p-business-node-column article > small { font-size: 12px; }
+.p-business-node-column article > p { margin: 2px 0; font-size: 13px; color: #455774; }
+.p-business-node-column article > p strong { font-variant-numeric: tabular-nums; }
+.p-business-link-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.prototype.p-reference .p-business-port {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 2px solid #6886c1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px #f5f8ff;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+  cursor: pointer;
+}
+.p-business-port.output { left: 100%; cursor: grab; }
+.p-business-port.input { left: 0; }
+.prototype.p-reference .p-business-port.input.eligible { background: #dfe9ff; }
+.prototype.p-reference .p-business-port:disabled { border-color: #b0bdd2; background: #edf1f7; box-shadow: none; cursor: default; }
+.p-association-instruction,
+.p-association-rule,
+.p-association-empty { padding: 9px 12px; border-radius: 10px; color: #465b7a; background: #e8eef8; font-size: 13px; line-height: 1.6; }
+.p-association-instruction { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.p-association-rule { margin: 13px 0 0; }
+.p-association-empty { margin: 0; background: rgb(255 255 255 / 48%); }
+.p-business-relation-list { display: grid; gap: 6px; margin-top: 14px; }
+.p-business-relation-list h4 { margin: 0; color: #435571; }
+.p-business-relation-list > div { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 9px; border-radius: 9px; background: rgb(232 238 248 / 68%); color: #435571; font-size: 13px; }
+.p-business-relation-list > div > svg { flex: 0 0 auto; }
+.p-relation-arrow { display: inline-block; margin: 0 7px; color: #4e6a9f; }
+.p-association-instruction button, .p-business-relation-list button {
+  display: grid;
+  flex: 0 0 32px;
+  place-items: center;
+  height: 32px;
+  margin-left: auto;
+  border: 1px solid #cbd7ea;
+  border-radius: 9px;
+  color: #526888;
+  background: #fbfcff;
+}
+.p-association-caption { margin: 10px 0 0; color: #586981; font-size: 12px; line-height: 1.65; }
+
+@media (max-width: 680px) {
+  .prototype.p-reference .p-board-scroll > .p-board { min-width: 880px; }
+  .prototype.p-reference .p-task-row .p-task-action { padding-inline: 7px; }
+  .prototype.p-reference :is(.p-drawer, .p-dialog) :is(input, select, textarea) { font-size: 16px; }
+  .p-business-graph { gap: 25px; }
+  .p-business-node-column article { padding: 9px 10px; }
+  .p-business-association-title { gap: 8px; }
+}
