@@ -2,3 +2,9 @@ const {test}=require('node:test');const assert=require('node:assert/strict');con
 const js=ts.transpileModule(fs.readFileSync('lib/customer-asset-trend.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2017}}).outputText;const ctx={exports:{},Intl,Date};vm.runInNewContext(js,ctx);
 test('uses Shanghai months and opening cumulative; excludes invalid missing future dates',()=>{const dates=['2025-01-01T00:00:00Z','2026-08-31T16:00:00Z','2026-10-01T00:00:00Z',null,'invalid','2026-12-01T00:00:00Z'];const r=ctx.exports.customerAssetTrend(dates.map(appliedAt=>({appliedAt})),3,new Date('2026-11-09T00:00:00Z'));assert.equal(r.dated,3);assert.equal(r.excluded,3);assert.equal(JSON.stringify(r.points),JSON.stringify([{month:'2026-09',added:1,total:2},{month:'2026-10',added:1,total:3},{month:'2026-11',added:0,total:3}]))});
 test('handles empty input and year boundary',()=>{const r=ctx.exports.customerAssetTrend([],3,new Date('2026-01-09T00:00:00Z'));assert.equal(r.points[0].month,'2025-11');assert.equal(r.points[2].month,'2026-01');assert.ok(r.points.every(p=>p.added===0&&p.total===0))});
+
+test('2026 new customers use Shanghai year boundaries, unique IDs and exclude invalid/future dates',()=>{
+const rows=[['a','2025-12-31T16:00:00Z'],['b','2025-12-31T15:59:59Z'],['c','2026-11-01T00:00:00Z'],['c','2026-11-01T00:00:00Z'],['d','2026-12-01T00:00:00Z'],['e',null],['f','invalid'],['g','2027-01-01T00:00:00Z']].map(([id,appliedAt])=>({id,appliedAt}));
+assert.equal(ctx.exports.customersAddedInYear(rows,2026,new Date('2026-11-10T00:00:00Z')),2);
+assert.equal(ctx.exports.customersAddedInYear([],2026),0);
+});

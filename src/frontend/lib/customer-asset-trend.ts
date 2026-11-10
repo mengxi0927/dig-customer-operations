@@ -21,3 +21,12 @@ export function customerAssetTrend(customers: DigAccount[], months: number, now 
     }),
   };
 }
+
+export function customersAddedInYear(customers: DigAccount[], year: number, now = new Date()) {
+  const start = new Date(`${year}-01-01T00:00:00+08:00`).getTime();
+  const end = new Date(`${year + 1}-01-01T00:00:00+08:00`).getTime();
+  return new Set(customers.filter(c => {
+    const time = c.appliedAt ? new Date(c.appliedAt).getTime() : NaN;
+    return Number.isFinite(time) && time >= start && time < end && time <= now.getTime();
+  }).map(c => c.id)).size;
+}

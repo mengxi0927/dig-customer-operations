@@ -14,7 +14,7 @@
   margin-bottom: 0;
 }
 .asset-metrics {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 .asset-overview > .g-card > .g-card-heading select {
   max-width: 220px;
@@ -262,7 +262,7 @@
 }
 @media (min-width: 1500px) {
   .asset-metrics {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 @media (max-width: 1100px) {
@@ -392,3 +392,27 @@
 .asset-growth-structure {
   margin-bottom: 24px;
 }
+
+.asset-search-filter {flex:1;min-width:120px;position:relative;}
+.asset-search-filter>span {display:block;font-size:12px;color:#8294ae;margin-bottom:8px;}
+.asset-search-filter .asset-filter-anchor {position:relative;}
+.asset-search-filter .asset-filter-trigger {list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #e2e8f1;border-radius:7px;padding:12px 14px;color:#647b9d;background:#fff;font-size:13px;cursor:pointer;min-height:44px;}
+
+.asset-search-filter .asset-filter-trigger>span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.asset-search-filter .asset-filter-trigger:focus-visible {outline:2px solid #527de0;outline-offset:2px;}
+.asset-filter-popover {position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:100%;width:max-content;max-width:min(360px,85vw);background:#fff;border:1px solid #e2e8f1;border-radius:9px;box-shadow:0 8px 24px #22355220;padding:8px;}
+.asset-filter-search {display:flex;align-items:center;gap:6px;border:1px solid #e2e8f1;border-radius:6px;padding:0 8px;color:#8294ae;}
+.asset-filter-search input {width:100%;min-width:0;border:0!important;outline:0;padding:9px 0!important;background:transparent;}
+.asset-filter-options {max-height:260px;overflow:auto;margin-top:6px;}
+.asset-filter-options button {display:flex;align-items:center;justify-content:space-between;gap:15px;width:100%;text-align:left;padding:10px;border:0;border-radius:5px;background:#fff;color:#48617f;font-size:13px;cursor:pointer;}
+.asset-filter-options button:hover,.asset-filter-options button:focus-visible,.asset-filter-options button[aria-selected=true] {background:#edf3ff;}
+.asset-filter-options p {padding:12px;color:#8294ae;font-size:12px;}
+
+/* Menus extend beyond the card without changing its height or scrolling the page. */
+.g-card.asset-filters {overflow:visible;position:relative;z-index:5;}
+.asset-search-filter.is-open {z-index:10;}
+.asset-search-filter .asset-filter-trigger {width:100%;font-family:inherit;margin:0;text-align:left;transition:none;}
+.asset-filter-popover {animation:none;transition:none;}
+.asset-filter-search input {scroll-margin:0;}
+
+@media (min-width:701px) and (max-width:1100px){.g-metrics.asset-metrics{grid-template-columns:repeat(2,minmax(0,1fr));}}

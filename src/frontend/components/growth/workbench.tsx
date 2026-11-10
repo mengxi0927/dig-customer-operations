@@ -560,9 +560,9 @@ export default function GrowthWorkbench() {
           ))}
         </nav>
         <div className="g-sidebar-bottom">
-          <a href="/data">
+          <a href="https://dcholdings.feishu.cn/app/NMZEbyNx5a0Fews9qHWctsNVn9g?pageId=pgentnD0whSh1vQB" target="_blank" rel="noopener noreferrer">
             <Building2 size={17} />
-            飞书数据中心 <ArrowUpRight size={14} />
+            DIG端到端系统 <ArrowUpRight size={14} />
           </a>
           <div>
             <span className="g-dot" />
@@ -578,20 +578,6 @@ export default function GrowthWorkbench() {
             {nav.find((n) => n.id === view)?.label}
           </span>
           <div>
-            <label className="g-mode">
-              数据模式
-              <select
-                aria-label="数据模式"
-                value={demo ? "demo" : "live"}
-                onChange={(e) => {
-                  setReady(false);
-                  setDemo(e.target.value === "demo");
-                }}
-              >
-                <option value="live">真实数据</option>
-                <option value="demo">评选演示 · 合成数据</option>
-              </select>
-            </label>
             <button
               className="g-icon-btn"
               aria-label="刷新数据"
@@ -656,13 +642,6 @@ export default function GrowthWorkbench() {
                 : "真实客户来自飞书；增长建议关联现有商机与标杆案例，跟进记录保存在本浏览器。"}
             {!demo && <a href="/data">查看源数据 ↗</a>}
           </div>}
-          {!demo && error && (
-            <div className="g-error" role="alert">
-              飞书数据未完成读取：{error}{" "}
-              <button onClick={() => void refresh()}>重试</button> ·
-              可切换演示模式体验流程。
-            </div>
-          )}
           {view === "customers" && (
             <>
               <div className="g-metrics">

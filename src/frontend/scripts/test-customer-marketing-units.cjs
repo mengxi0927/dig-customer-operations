@@ -1,0 +1,4 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const ts=require('typescript');const fs=require('node:fs');const vm=require('node:vm');
+const ctx={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/customer-marketing-units.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,ctx);
+test('marketing units are deduplicated across linked opportunities and never use delivery units',()=>{assert.equal(JSON.stringify(ctx.exports.customerMarketingUnits([{marketingUnits:['生态客户部',' KA客户部 '],units:['交付部']},{marketingUnits:['生态客户部','']},{units:['基础交付']} ])),JSON.stringify(['生态客户部','KA客户部']));});
+test('missing marketing field remains unknown',()=>{assert.equal(ctx.exports.customerMarketingUnits([{units:['交付部']}]).length,0);assert.equal(ctx.exports.customerMarketingUnits([]).length,0);});

@@ -12,7 +12,9 @@ import { CustomerMap } from "@/components/customer-map";
 import cityProvince from "@/lib/city-province.json";
 import type { DigAccount, DigOpportunity } from "@/lib/dig-types";
 import "./customer-assets.css";
-import { customerAssetTrend } from "@/lib/customer-asset-trend";
+import SearchableFilter from "./searchable-filter";
+import { customerMarketingUnits } from "@/lib/customer-marketing-units";
+import { customerAssetTrend, customersAddedInYear } from "@/lib/customer-asset-trend";
 const mapping = cityProvince as Record<string, string>;
 const trimProvince = (s: string) =>
   s.replace(/特别行政区|维吾尔自治区|壮族自治区|回族自治区|自治区|省|市/g, "");
@@ -76,9 +78,10 @@ export default function CustomerAssets({
           .filter(Boolean),
       ),
     );
+  const departments = (c: DigAccount) => customerMarketingUnits(linked.get(c.id) || []);
   const filtered = customers.filter(
     (c) =>
-      (!department || c.department === department) &&
+      (!department || (departments(c).length ? departments(c) : ["营销单元未关联"]).includes(department)) &&
       (!owner || owners(c).includes(owner)) &&
       (!industry || (c.industry || "行业未填写") === industry) &&
       (!region || customerProvince(c.city) === region) &&
@@ -98,19 +101,6 @@ export default function CustomerAssets({
     (c) => (!salesFilter || owners(c).includes(salesFilter)) &&
       (!search || [c.name, c.number, c.city].some(v => v.includes(search))),
   );
-  const filled = filtered.reduce(
-    (n, c) =>
-      n +
-      [
-        c.name === "名称缺失" ? "" : c.name,
-        c.number,
-        c.department,
-        c.industry,
-        c.city,
-        c.level,
-      ].filter(Boolean).length,
-    0,
-  );
   const history = filtered.filter((c) =>
     (linked.get(c.id) || []).some(
       (o) => o.actualAmount !== null && o.actualAmount > 0,
@@ -128,25 +118,9 @@ export default function CustomerAssets({
     set: (s: string) => void,
     values: string[],
   ) => (
-    <label>
-      {label}
-      <select
-        value={value}
-        onChange={(e) => {
-          set(e.target.value);
-          selectProvince("");
-        }}
-      >
-        <option value="">全部</option>
-        {Array.from(new Set(values))
-          .filter(Boolean)
-          .sort()
-          .map((v) => (
-            <option key={v}>{v}</option>
-          ))}
-      </select>
-    </label>
+    <SearchableFilter label={label} value={value} values={values} onChange={v => {set(v);selectProvince("");setListPage(1);}} />
   );
+
   function Bars({
     items,
     selected,
@@ -208,7 +182,7 @@ export default function CustomerAssets({
           "部门",
           department,
           setDepartment,
-          customers.map((c) => c.department),
+          [...opportunities.flatMap(o => o.marketingUnits || []), ...(customers.some(c => !departments(c).length) ? ["营销单元未关联"] : [])],
         )}
         {select(
           "关联销售员",
@@ -269,21 +243,9 @@ export default function CustomerAssets({
             sub: `未关联 ${filtered.length - matched.length} 家`,
           },
           {
-            label: "覆盖省级地区",
-            value: regions.filter(([r]) => r !== "地区待核实").length,
-            sub: `地区待核实 ${regions.find(([r]) => r === "地区待核实")?.[1] || 0} 家`,
-          },
-          {
-            label: "核心字段完整率",
-            value: filtered.length
-              ? `${((filled / (filtered.length * 6)) * 100).toFixed(1)}%`
-              : "—",
-            sub: "名称、编号、部门、行业、城市、级别",
-          },
-          {
-            label: "关联销售员",
-            value: new Set(filtered.flatMap((c) => owners(c))).size,
-            sub: "由关联商机销售员字段统计",
+            label: "26年新增客户数",
+            value: loading ? "—" : customersAddedInYear(filtered, 2026),
+            sub: "2026年1月1日至今 · 按客户申请时间统计",
           },
         ].map((m) => (
           <article key={m.label}>
