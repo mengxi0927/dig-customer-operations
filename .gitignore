@@ -19,3 +19,6 @@ src/backend/data/*
 !src/backend/data/.gitkeep
 node_modules
 *-preview.png
+
+.local-logs/
+src/frontend/scripts/archive-qcc-*.cjs

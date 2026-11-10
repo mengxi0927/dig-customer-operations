@@ -5,5 +5,5 @@ import { AppShell } from "@/components/app-shell";
 
 export function PrototypeBoundary({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  return path === "/" ? <>{children}</> : <AppShell>{children}</AppShell>;
+  return (path === "/" || path === "/data") ? <>{children}</> : <AppShell>{children}</AppShell>;
 }

@@ -2,3 +2,6 @@
 node_modules
 .next
 npm-debug.log*
+
+.local-logs
+scripts/archive-qcc-*.cjs

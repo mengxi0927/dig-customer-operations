@@ -1,5 +1,4 @@
-import DigPrototype from '@/components/prototype/dig-prototype';
-
+import GrowthWorkbench from "@/components/growth/workbench";
 export default function Page() {
-  return <DigPrototype />;
+  return <GrowthWorkbench />;
 }
