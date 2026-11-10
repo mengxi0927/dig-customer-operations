@@ -66,7 +66,7 @@ export default function CustomerLevelChart({
 
   return (
     <div className="asset-structure">
-      <div className="asset-donut" data-has-highlight={Boolean(highlighted) || undefined}>
+      <div className="asset-donut" data-populated={levels.length > 0 || undefined} data-has-highlight={Boolean(highlighted) || undefined}>
         <svg viewBox="0 0 180 180" role="group"
           aria-label={loading ? "正在读取客户总数" : `客户级别分布，共 ${total} 家`}>
           {!levels.length && <circle className="asset-donut-track" cx={center} cy={center} r={radius} />}

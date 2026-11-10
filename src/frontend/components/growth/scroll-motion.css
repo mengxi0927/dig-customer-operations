@@ -1,0 +1,50 @@
+.growth-app[data-scroll-motion] :is(.g-card, .g-metrics > article, .og-metrics > div, .og-card, .g-panel):not([data-in-view="true"], :focus-visible, :has(:focus-visible)) {
+  opacity: .78;
+  transform: translateY(-12px);
+}
+.growth-app[data-scroll-motion] :is(.g-card, .g-metrics > article, .og-metrics > div, .og-card, .g-panel)[data-in-view] {
+  transition: opacity var(--motion-duration) var(--viewport-ease),
+    transform var(--motion-duration) var(--viewport-ease), box-shadow var(--motion-duration) var(--motion-ease);
+}
+.growth-app[data-scroll-motion] [data-in-view] { --viewport-ease: ease-in; }
+.growth-app[data-scroll-motion] [data-in-view="true"] { --viewport-ease: ease-out; }
+
+.growth-app[data-scroll-motion] :is(
+  .asset-table tbody tr, .g-table tbody tr, .asset-bars button, .asset-legend button, .asset-reps button,
+  .asset-customer-list button, .og-empty, .g-result-score, .g-result-content, .g-admission-loading
+):not([data-in-view="true"], :focus-visible, :has(:focus-visible)) { opacity: .25; }
+.growth-app[data-scroll-motion] :is(
+  .asset-table tbody tr, .g-table tbody tr, .asset-bars button, .asset-legend button, .asset-reps button,
+  .asset-customer-list button, .og-empty, .g-result-score, .g-result-content, .g-admission-loading
+)[data-in-view] {
+  transition: opacity .24s var(--viewport-ease), color .16s ease, background .18s ease,
+    box-shadow .18s ease, transform .24s var(--spring);
+}
+
+.growth-app[data-scroll-motion] .asset-bars button:not([data-in-view="true"], :focus-visible) em { transform: scaleX(0); }
+.growth-app[data-scroll-motion] .asset-bars button[data-in-view] em {
+  transform-origin: left center;
+  transition: transform .48s var(--viewport-ease), width .32s ease-out;
+}
+
+.growth-app[data-scroll-motion] .asset-trend-plot:not([data-in-view="true"], :has(:focus-visible)) :is(.asset-trend-bar, .asset-trend-bar-hit) { transform: scaleY(0); }
+.growth-app[data-scroll-motion] .asset-trend-plot:not([data-in-view="true"], :has(:focus-visible)) .asset-trend-added { opacity: 0; }
+.growth-app[data-scroll-motion] .asset-trend-plot:not([data-in-view="true"], :has(:focus-visible)) .asset-trend-sweep { transform: scaleX(0); }
+.growth-app[data-scroll-motion] .asset-trend-plot[data-in-view] :is(.asset-trend-bar, .asset-trend-bar-hit) {
+  transition: transform .46s var(--viewport-ease) var(--bar-delay), filter .18s ease-out;
+}
+.growth-app[data-scroll-motion] .asset-trend-plot[data-in-view] .asset-trend-added { transition: opacity .22s var(--viewport-ease); }
+.growth-app[data-scroll-motion] .asset-trend-plot[data-in-view] .asset-trend-sweep { transition: transform .66s ease-in-out; }
+.growth-app[data-scroll-motion] .asset-trend-plot[data-in-view="true"] .asset-trend-added { transition-delay: calc(var(--bar-delay) + .28s); }
+.growth-app[data-scroll-motion] .asset-trend-plot[data-in-view="true"] .asset-trend-sweep { transition-delay: .09s; }
+.growth-app[data-scroll-motion] .asset-trend-plot[data-in-view="false"] :is(.asset-trend-bar, .asset-trend-bar-hit) { transition-delay: var(--bar-reverse-delay), 0s; }
+.growth-app[data-scroll-motion] .asset-trend-plot:has(:focus-visible) :is(.asset-trend-bar, .asset-trend-bar-hit, .asset-trend-added, .asset-trend-sweep) {
+  transition-duration: 0s;
+  transition-delay: 0s;
+}
+
+@supports (mask-image: conic-gradient(black, transparent)) {
+  .growth-app[data-scroll-motion] .asset-donut[data-populated]:not([data-in-view="true"]) svg { --asset-ring-angle: 0deg; }
+  .growth-app[data-scroll-motion] .asset-donut[data-in-view] svg { transition: --asset-ring-angle .67s ease-in-out; }
+  .growth-app[data-scroll-motion] .asset-donut:has(:focus-visible) svg { mask-image: none; }
+}

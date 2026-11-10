@@ -23,8 +23,14 @@ function OpportunityCard({ recommendation: r, progress, update, openCustomer }: 
   update: (patch: Partial<Progress>) => void;
   openCustomer: () => void;
 }) {
+  const details = useRef<HTMLDetailsElement>(null);
   return (
-    <article className="og-card">
+    <article className="og-card" onClick={event => {
+      if (!(event.target instanceof Element) ||
+          event.target.closest('a, button, label, input, textarea, select, details') ||
+          window.getSelection()?.toString()) return;
+      if (details.current) details.current.open = !details.current.open;
+    }}>
       <div className="og-card-top">
         <span className="og-kind" data-tone={kindTones[r.kind]}>{r.kind}</span>
         {progress && <span className="og-state" data-state={progress.state}>{progress.state}</span>}
@@ -40,7 +46,7 @@ function OpportunityCard({ recommendation: r, progress, update, openCustomer }: 
         <h4>建议下一步</h4>
         <p>{r.action}</p>
       </div>
-      <details className="og-details">
+      <details className="og-details" ref={details}>
         <summary>
           <BookOpen size={15} aria-hidden="true" />
           <span>推荐依据{r.matches.length > 0 && '与标杆案例'}</span>
@@ -61,14 +67,16 @@ function OpportunityCard({ recommendation: r, progress, update, openCustomer }: 
               <p>{[m.item.number, m.item.kind, m.item.unit].filter(Boolean).join(' · ')}</p>
               <span>匹配依据：{m.terms.join('、')}</span>
             </div>
-            <a href={CASE_REQUEST_URL} target="_blank" rel="noreferrer" className="g-btn">
-              申请查看标杆案例 <ArrowUpRight size={13} aria-hidden="true" />
+            <a href={CASE_REQUEST_URL} target="_blank" rel="noreferrer" className="g-btn og-case-request">
+              <BookOpen size={14} aria-hidden="true" /> 申请查看标杆案例 <ArrowUpRight size={13} aria-hidden="true" />
             </a>
           </div>)}
         </div>}
       </details>
       <div className="og-actions">
-        <button type="button" onClick={() => update({ state: '跟进中' })}>开始跟进</button>
+        <button className="og-start" type="button" onClick={() => update({ state: '跟进中' })}>
+          开始跟进<span className="og-start-emoji" aria-hidden="true">💪</span>
+        </button>
         <button type="button" onClick={() => update({ state: '已确认需求' })}>
           <CheckCircle2 size={14} aria-hidden="true" /> 已确认需求
         </button>

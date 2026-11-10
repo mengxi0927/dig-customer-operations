@@ -50,13 +50,8 @@
   background: var(--glass-raised);
   backdrop-filter: var(--glass-filter);
   box-shadow: var(--glass-shadow);
-  animation: g-panel-in var(--motion-duration) ease-out both;
 }
 .g-panel-layout[data-layout="split"] .g-panel { max-height: calc(100dvh - var(--top) - 28px); }
-@keyframes g-panel-in {
-  from { opacity: .78; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
-}
 .g-panel-header {
   display: flex;
   align-items: center;
@@ -183,6 +178,5 @@
   .g-panel-body { padding-inline: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .g-panel { animation: none; }
   .g-panel-separator::after, .g-panel-tools button, .g-panel-icon { transition: none; }
 }

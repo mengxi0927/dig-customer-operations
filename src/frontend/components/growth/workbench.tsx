@@ -39,9 +39,11 @@ import CustomerProfile from "./customer-profile";
 import OpportunityGrowth from "./opportunity-growth";
 import WorkspacePanels, { type PanelInfo } from "./workspace-panels";
 import AdmissionPanels from "./admission-panels";
-import { fadeSwap } from "./fade-swap";
+import { switchWorkspace } from "./fade-swap";
+import { useScrollMotion } from "./use-scroll-motion";
 import { demoAdmissionResult, CUSTOMER_CREATE_FORM } from "@/lib/admission-demo";
 import "./workbench-theme.css";
+import "./scroll-motion.css";
 
 type View = "customers" | "admission" | "radar";
 type CustomerTab = "assets" | "value";
@@ -268,6 +270,8 @@ export default function GrowthWorkbench() {
   const [accessReason, setAccessReason] = useState("");
   const [accessSaved, setAccessSaved] = useState(false);
   const viewContent = useRef<HTMLDivElement>(null);
+  const workspace = useRef<HTMLDivElement>(null);
+  useScrollMotion(workspace);
   const customerContent = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const page = panelTrail.at(-1);
@@ -397,13 +401,13 @@ export default function GrowthWorkbench() {
       (!query || [s.customer, s.title, s.text].some((v) => v.includes(query))),
   );
   function go(v: View) {
-    fadeSwap(viewContent.current, () => {
+    switchWorkspace(viewContent.current, () => {
       setView(v);
       setQuery("");
       if (v !== view) {
         setPanelTrail([]);
         returnFocus.current = null;
-        window.scrollTo({ top: 0 });
+        window.scrollTo({ top: 0, behavior: "instant" });
       }
     });
   }
@@ -818,7 +822,7 @@ export default function GrowthWorkbench() {
   }
 
   return (
-    <div className="growth-app" onPointerMove={pullPrimaryAction} onPointerOut={releasePrimaryAction}>
+    <div className="growth-app" ref={workspace} onPointerMove={pullPrimaryAction} onPointerOut={releasePrimaryAction}>
       <aside className="g-sidebar">
         <nav aria-label="主导航">
           {nav.map((item) => (
@@ -897,7 +901,7 @@ export default function GrowthWorkbench() {
           {view === "customers" && (
             <Tabs.Root value={customerTab} activationMode="manual" onValueChange={(value) => {
               if (value === "assets" || value === "value") {
-                fadeSwap(customerContent.current, () => setCustomerTab(value));
+                switchWorkspace(customerContent.current, () => setCustomerTab(value));
               }
             }}>
               <div className="g-tab-bar">

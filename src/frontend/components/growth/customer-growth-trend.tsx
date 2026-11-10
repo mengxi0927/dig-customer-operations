@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 
 type TrendPoint = { month: string; added: number; total: number };
 type Series = "added" | "total";
@@ -12,6 +12,7 @@ const formatCount = (value: number) => value.toLocaleString("zh-CN");
 
 export default function CustomerGrowthTrend({ points }: { points: TrendPoint[] }) {
   const gradientId = useId();
+  const lineClipId = useId();
   const tooltipId = useId();
   const plot = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -22,6 +23,10 @@ export default function CustomerGrowthTrend({ points }: { points: TrendPoint[] }
   const highlight = hover ?? focus;
   const maxAdded = Math.max(1, ...points.map(point => point.added));
   const maxTotal = Math.max(1, ...points.map(point => point.total));
+  const barMotion = (index: number) => ({
+    "--bar-delay": `${index * 25}ms`,
+    "--bar-reverse-delay": `${(points.length - 1 - index) * 14}ms`,
+  } as CSSProperties);
   const chartPoints = points.map((point, i) => {
     const barHeight = (point.added / maxAdded) * chartHeight;
     const totalY = chartBase - (point.total / maxTotal) * chartHeight;
@@ -125,6 +130,9 @@ export default function CustomerGrowthTrend({ points }: { points: TrendPoint[] }
               <stop offset="0%" stopColor="var(--asset-trend-bar)" stopOpacity=".78" />
               <stop offset="100%" stopColor="var(--asset-trend-bar)" stopOpacity=".24" />
             </linearGradient>
+            <clipPath id={lineClipId}>
+              <rect className="asset-trend-sweep" width={chartWidth} height={chartBoxHeight} />
+            </clipPath>
           </defs>
           {[0, 1, 2, 3, 4].map(i => {
             const y = chartBase - (i / 4) * chartHeight;
@@ -135,34 +143,43 @@ export default function CustomerGrowthTrend({ points }: { points: TrendPoint[] }
             </g>;
           })}
           {active && <line className="asset-trend-guide" x1={active.x} x2={active.x} y1="42" y2={chartBase} aria-hidden="true" />}
-          {chartPoints.map(({ month, x, barHeight }) => (
+          {chartPoints.map(({ month, x, barHeight }, index) => (
             <g key={month} aria-hidden="true">
               <rect className="asset-trend-bar" data-highlighted={highlight?.month === month && highlight.series === "added" || undefined}
+                style={barMotion(index)}
                 fill={`url(#${gradientId})`} x={x - 18} y={chartBase - barHeight} width="36" height={barHeight} rx="4" />
               <text x={x} y="264" textAnchor="middle">{month}</text>
             </g>
           ))}
-          <path className="asset-trend-line" data-highlighted={active && highlight?.series === "total" || undefined} d={trendLine} aria-hidden="true" />
-          {chartPoints.map(point => (
-            <g key={point.month} aria-hidden="true">
-              <circle className="asset-trend-point" data-highlighted={highlight?.month === point.month && highlight.series === "total" || undefined}
-                cx={point.x} cy={point.totalY} r="4" />
-              <text className="asset-trend-total" x={point.x} y={point.totalLabelY} dominantBaseline="central" textAnchor="middle">{point.total}</text>
-              <text className="asset-trend-added" x={point.x} y={point.addedY} dominantBaseline="central" textAnchor="middle">{point.added}</text>
-            </g>
+          <g clipPath={`url(#${lineClipId})`} aria-hidden="true">
+            <path className="asset-trend-line" data-highlighted={active && highlight?.series === "total" || undefined} d={trendLine} />
+            {chartPoints.map(point => (
+              <g key={point.month}>
+                <circle className="asset-trend-point" data-highlighted={highlight?.month === point.month && highlight.series === "total" || undefined}
+                  cx={point.x} cy={point.totalY} r="4" />
+                <text className="asset-trend-total" x={point.x} y={point.totalLabelY} dominantBaseline="central" textAnchor="middle">{point.total}</text>
+              </g>
+            ))}
+          </g>
+          {chartPoints.map((point, index) => (
+            <text key={point.month} className="asset-trend-added" x={point.x} y={point.addedY} dominantBaseline="central" textAnchor="middle"
+              style={barMotion(index)} aria-hidden="true">{point.added}</text>
           ))}
-          {chartPoints.map(point => {
+          {chartPoints.map((point, index) => {
             const height = Math.max(16, point.barHeight);
-            return <rect key={point.month} className="asset-trend-hit" x={point.x - 18} y={chartBase - height} width="36" height={height}
+            return <rect key={point.month} className="asset-trend-hit asset-trend-bar-hit" x={point.x - 18} y={chartBase - height} width="36" height={height}
+              style={barMotion(index)}
               {...interaction(point, "added")} />;
           })}
-          <path className="asset-trend-line-hit" d={trendLine} aria-hidden="true"
-            onPointerEnter={hoverLine} onPointerMove={hoverLine}
-            onPointerLeave={() => setHover(current => current?.series === "total" ? null : current)} />
-          {chartPoints.map(point => (
-            <circle key={point.month} className="asset-trend-hit" cx={point.x} cy={point.totalY} r="10"
-              {...interaction(point, "total")} />
-          ))}
+          <g clipPath={`url(#${lineClipId})`}>
+            <path className="asset-trend-line-hit" d={trendLine} aria-hidden="true"
+              onPointerEnter={hoverLine} onPointerMove={hoverLine}
+              onPointerLeave={() => setHover(current => current?.series === "total" ? null : current)} />
+            {chartPoints.map(point => (
+              <circle key={point.month} className="asset-trend-hit" cx={point.x} cy={point.totalY} r="10"
+                {...interaction(point, "total")} />
+            ))}
+          </g>
         </svg>
       </div>
       {active && <div className="asset-trend-tooltip" id={tooltipId} role="tooltip" ref={tooltip}>

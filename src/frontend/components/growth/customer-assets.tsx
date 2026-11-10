@@ -20,12 +20,16 @@ import "./customer-assets.css";
 import Dropdown from "./dropdown";
 import CustomerLevelChart from "./customer-level-chart";
 import CustomerGrowthTrend from "./customer-growth-trend";
+import CustomerAssetFilters, { emptyAssetFilters, type AssetFilters } from "./customer-asset-filters";
 import SalesContactAvatars from "./sales-contact-avatars";
 import { fadeSwap } from "./fade-swap";
 import { tableBadgeColor } from "./table-badge-color";
 import { customerMarketingUnits } from "@/lib/customer-marketing-units";
 import { customerAssetTrend, customersAddedInYear } from "@/lib/customer-asset-trend";
 const mapping = cityProvince as Record<string, string>;
+const provinceNames = [...new Set(Object.values(mapping).filter(Boolean))];
+const filterOptions = (values: string[]) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, "zh-CN"));
+const matchesFilter = (chosen: string[], values: string[]) => !chosen.length || values.some(value => chosen.includes(value));
 const levelPalette = new Map([
   ["核心客户", "var(--palette-blue)"],
   ["潜力客户", "var(--palette-red)"],
@@ -49,9 +53,7 @@ const trimProvince = (s: string) =>
 export function customerProvince(city: string) {
   const s = city.trim();
   if (!s) return "地区待核实";
-  const explicit = Object.values(mapping)
-    .filter(Boolean)
-    .find(
+  const explicit = provinceNames.find(
       (p) =>
         s.startsWith(p + "省") ||
         s.startsWith(p + "市") ||
@@ -80,11 +82,7 @@ export default function CustomerAssets({
   onCustomer: (c: DigAccount) => void;
   loading: boolean;
 }) {
-  const [department, setDepartment] = useState(""),
-    [owner, setOwner] = useState(""),
-    [industry, setIndustry] = useState(""),
-    [region, setRegion] = useState(""),
-    [level, setLevel] = useState(""),
+  const [filters, setFilters] = useState<AssetFilters>(emptyAssetFilters),
     [search, setSearch] = useState(""),
     [province, setProvince] = useState(""),
     [salesFilter, setSalesFilter] = useState(""),
@@ -113,14 +111,24 @@ export default function CustomerAssets({
       ),
     );
   const departments = (c: DigAccount) => customerMarketingUnits(linked.get(c.id) || []);
-  const filtered = customers.filter(
-    (c) =>
-      (!department || (departments(c).length ? departments(c) : ["营销单元未关联"]).includes(department)) &&
-      (!owner || owners(c).includes(owner)) &&
-      (!industry || (c.industry || "行业未填写") === industry) &&
-      (!region || customerProvince(c.city) === region) &&
-      (!level || (c.level || "级别未填写") === level),
-  );
+  const options: AssetFilters = {
+    department: filterOptions([
+      ...opportunities.flatMap(o => o.marketingUnits || []),
+      ...(customers.some(c => !departments(c).length) ? ["营销单元未关联"] : []),
+    ]),
+    owner: filterOptions(opportunities.flatMap(o => o.owner.split("、").map(name => name.trim()))),
+    industry: filterOptions(customers.map(c => c.industry || "行业未填写")),
+    region: filterOptions(customers.map(c => customerProvince(c.city))),
+    level: filterOptions(customers.map(c => c.level || "级别未填写")),
+  };
+  const filtered = customers.filter(c => {
+    const units = filters.department.length ? departments(c) : [];
+    return matchesFilter(filters.department, units.length ? units : ["营销单元未关联"])
+      && (!filters.owner.length || matchesFilter(filters.owner, owners(c)))
+      && matchesFilter(filters.industry, [c.industry || "行业未填写"])
+      && (!filters.region.length || filters.region.includes(customerProvince(c.city)))
+      && matchesFilter(filters.level, [c.level || "级别未填写"]);
+  });
   const regions = counts(filtered.map((c) => customerProvince(c.city))),
     industries = counts(filtered.map((c) => c.industry || "行业未填写")),
     levels = counts(filtered.map((c) => c.level || "级别未填写"));
@@ -156,29 +164,24 @@ export default function CustomerAssets({
       }
     });
   }
-  const select = (
-    label: string,
-    value: string,
-    set: (s: string) => void,
-    values: string[],
-  ) => (
-    <Dropdown label={label} value={value} searchable
-      options={[{ value: "", label: "全部" }, ...[...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, "zh-CN"))]}
-      onChange={v => {set(v);selectProvince("");setListPage(1);}} />
-  );
+  function updateFilters(next: AssetFilters) {
+    setFilters(next);
+    selectProvince("");
+    setListPage(1);
+  }
 
   function renderBars(
     items: [string, number][],
-    selected: string,
+    selected: string[],
     onSelect: (value: string) => void,
   ) {
     return (
       <div className="asset-bars">
         {items.slice(0, 10).map(([name, n]) => (
           <button
-            className={selected === name ? "active" : ""}
+            className={selected.includes(name) ? "active" : ""}
             key={name}
-            onClick={() => onSelect(selected === name ? "" : name)}
+            onClick={() => onSelect(name)}
           >
             <span title={name}>{name}</span>
             <i>
@@ -210,54 +213,8 @@ export default function CustomerAssets({
     ?? secondaryLevelColors[otherLevels.indexOf(name) % secondaryLevelColors.length];
   return (
     <div className="asset-overview">
-      <section className="asset-filters" aria-label="客户资产筛选">
-        {select(
-          "部门",
-          department,
-          setDepartment,
-          [...opportunities.flatMap(o => o.marketingUnits || []), ...(customers.some(c => !departments(c).length) ? ["营销单元未关联"] : [])],
-        )}
-        {select(
-          "关联销售员",
-          owner,
-          setOwner,
-          opportunities.flatMap((o) =>
-            o.owner.split("、").map((name) => name.trim()),
-          ),
-        )}
-        {select(
-          "行业",
-          industry,
-          setIndustry,
-          customers.map((c) => c.industry || "行业未填写"),
-        )}
-        {select(
-          "地区",
-          region,
-          setRegion,
-          customers.map((c) => customerProvince(c.city)),
-        )}
-        {select(
-          "客户级别",
-          level,
-          setLevel,
-          customers.map((c) => c.level || "级别未填写"),
-        )}
-        <button
-          className="g-btn"
-          onClick={() => {
-            setDepartment("");
-            setOwner("");
-            setIndustry("");
-            setRegion("");
-            setLevel("");
-            setSearch("");
-            selectProvince("");
-          }}
-        >
-          重置筛选
-        </button>
-      </section>
+      <CustomerAssetFilters options={options} value={filters} onChange={updateFilters}
+        onReset={() => { setSearch(""); updateFilters(emptyAssetFilters); }} />
       <div className="asset-growth-structure">
         <section className="g-card g-metric-highlight asset-level-structure">
           <div className="g-card-heading">
@@ -455,7 +412,7 @@ export default function CustomerAssets({
                         点击地图中的省份，右侧将展开当地销售员和客户名单。
                       </p>
                       <div className="asset-region-divider" aria-hidden="true"><span>·</span></div>
-                      {renderBars(regions, "", selectProvince)}
+                      {renderBars(regions, [], selectProvince)}
                     </>
                   )}
                 </aside>
@@ -468,17 +425,16 @@ export default function CustomerAssets({
               <div className="g-card-heading asset-distribution-heading">
                 <div><h3>客户行业分布</h3><p>客户数量 Top 10 · 点击行业联动筛选</p></div>
               </div>
-              {renderBars(industries, industry, value => {
-                setIndustry(value);
-                setListPage(1);
-                selectProvince("");
-              })}
+              {renderBars(industries, filters.industry, name => updateFilters({
+                ...filters,
+                industry: filters.industry.includes(name) ? filters.industry.filter(item => item !== name) : [name],
+              }))}
             </Tabs.Content>
             <Tabs.Content value="region">
               <div className="g-card-heading asset-distribution-heading">
                 <div><h3>客户地区分布</h3><p>客户数量与占比 · 点击地区打开地图明细</p></div>
               </div>
-              {renderBars(regions, province, value => changeDistribution("map", value))}
+              {renderBars(regions, [province], name => changeDistribution("map", province === name ? "" : name))}
             </Tabs.Content>
           </div>
         </Tabs.Root>
