@@ -1,15 +1,15 @@
 /* A quiet, connected workspace: mist grey, lavender-blue, soft islands. */
 .prototype.p-reference {
-  --p-bg: #e9eef5;
+  --p-bg: var(--palette-gray);
   --p-card: rgb(255 255 255 / 84%);
   --p-surface-primary: rgb(255 255 255 / 86%);
   --p-surface-secondary: rgb(255 255 255 / 40%);
-  --p-ink: #30323a;
+  --p-ink: var(--palette-ink);
   --p-muted: #858893;
   --p-line: #dedfe7;
-  --p-blue: #85A2DC;
-  --p-red: #D06B6B;
-  --p-dark: #292c32;
+  --p-blue: var(--palette-blue);
+  --p-red: var(--palette-red);
+  --p-dark: var(--palette-ink);
   color: var(--p-ink);
   background: linear-gradient(135deg, #e2e5eb 0%, #f8fafc 42%, #eaf1fa 70%, #dce8f7 100%);
   background-attachment: fixed;
@@ -534,10 +534,9 @@
   .p-reference .p-sidebar:is(:hover, :has(:focus-visible)) .p-user { justify-content: flex-start; }
 }
 
-/* Reference-image samples: blue #85A2DC; red #D06B6B. */
 .p-reference .p-sparkline path { stroke: var(--p-blue); }
-.p-reference .p-tag.blue { background: rgb(133 162 220 / 14%); color: #6584bd; }
-.p-reference .p-tag.rose { background: rgb(208 107 107 / 12%); color: #b75656; }
+.p-reference .p-tag.blue { background: color-mix(in srgb, var(--p-blue) 14%, transparent); color: var(--palette-blue-ink); }
+.p-reference .p-tag.rose { background: color-mix(in srgb, var(--p-red) 12%, transparent); color: var(--palette-red-ink); }
 .p-reference .p-tag.rose::before { content: ""; width: 4px; height: 4px; background: var(--p-red); border-radius: 50%; margin-right: 4px; }
 .p-reference .p-stage-dot,
 .p-reference .p-stage-dot.stage-1,
@@ -548,8 +547,8 @@
 .p-reference .p-business-track > span.chart-2 { background: var(--p-red); }
 .p-reference .p-poc-card progress::-webkit-progress-value { background: var(--p-blue); }
 .p-reference .p-poc-card progress::-moz-progress-bar { background: var(--p-blue); }
-.p-reference .p-op-card.stalled { border-color: rgb(208 107 107 / 32%); }
-.p-reference .p-op-card.stalled .p-op-next { color: #b46d6d; background: rgb(208 107 107 / 6%); }
+.p-reference .p-op-card.stalled { border-color: color-mix(in srgb, var(--p-red) 32%, transparent); }
+.p-reference .p-op-card.stalled .p-op-next { color: var(--palette-red-ink); background: color-mix(in srgb, var(--p-red) 6%, transparent); }
 .p-reference .p-tabs button.selected { border-color: var(--p-blue); }
 
 /* The opportunity board groups independent records by stage. */

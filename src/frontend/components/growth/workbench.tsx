@@ -1,10 +1,19 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import * as Tabs from "@radix-ui/react-tabs";
 import {
   ArrowUpRight,
   ArrowRight,
-  Building2,
+  BriefcaseBusiness,
+  ClipboardCheck,
+  FolderOpen,
+  LoaderCircle,
+  Network,
+  ScanSearch,
+  UserRound,
   ChevronRight,
+  ChartNoAxesCombined,
+  List,
   Layers3,
   LayoutDashboard,
   Plus,
@@ -12,12 +21,10 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  X,
   RefreshCw,
 } from "lucide-react";
 import {
   assessAdmission,
-  capabilities,
   matchSignal,
   signalKey,
   type Signal,
@@ -26,10 +33,30 @@ import {
 import type { DigAccount, DigOpportunity, DigOverview } from "@/lib/dig-types";
 import "./workbench.css";
 import CustomerAssets from "./customer-assets";
+import CustomerValueTiers from "./customer-value-tiers";
+import Dropdown from "./dropdown";
 import CustomerProfile from "./customer-profile";
 import OpportunityGrowth from "./opportunity-growth";
+import WorkspacePanels, { type PanelInfo } from "./workspace-panels";
+import AdmissionPanels from "./admission-panels";
+import { fadeSwap } from "./fade-swap";
 import { demoAdmissionResult, CUSTOMER_CREATE_FORM } from "@/lib/admission-demo";
-type View = "overview" | "admission" | "radar" | "customers";
+import "./workbench-theme.css";
+
+type View = "customers" | "admission" | "radar";
+type CustomerTab = "assets" | "value";
+type PanelPage =
+  | { kind: "archive"; customer: DigAccount }
+  | { kind: "evidence"; signal: Candidate }
+  | { kind: "access"; customer: DigAccount }
+  | { kind: "approval" }
+  | { kind: "import" };
+
+function panelId(page: PanelPage) {
+  if (page.kind === "archive" || page.kind === "access") return `${page.kind}:${page.customer.id}`;
+  if (page.kind === "evidence") return `evidence:${page.signal.id}`;
+  return page.kind;
+}
 type Action = {
   id: string;
   customer: string;
@@ -145,11 +172,21 @@ const demoSignals: Signal[] = [
   },
 ];
 const nav = [
-  { id: "overview", label: "客户资产总览", icon: LayoutDashboard },
+  { id: "customers", label: "客户经营", icon: LayoutDashboard },
   { id: "admission", label: "新客户准入", icon: ShieldCheck },
   { id: "radar", label: "老客户机会增长", icon: Radar },
-  { id: "customers", label: "客户价值分层", icon: Building2 },
 ] as const;
+const customerTabs = [
+  { id: "assets", label: "客户资产总览", icon: BriefcaseBusiness },
+  { id: "value", label: "客户价值分层", icon: ChartNoAxesCombined },
+] as const;
+const descriptions: Record<View, string> = {
+  customers: "盘点客户规模与分布，结合历史成单和在途机会选择经营方向。",
+  admission: "核对企业主体与风险证据，把需要人工判断的情况单独列出。",
+  radar: "从已有合作、标杆案例和客户动态中找到可以跟进的机会。",
+};
+const emptyCustomers: DigAccount[] = [];
+const emptyOpportunities: DigOpportunity[] = [];
 const money = (n: number) =>
   `${(n / 10000).toLocaleString("zh-CN", { maximumFractionDigits: 1 })} 万`;
 const localDate = () =>
@@ -166,6 +203,26 @@ const newSignal = (): Signal => ({
   deadline: "",
   kind: "采购意向",
 });
+const magneticAction = ".g-btn.primary";
+
+function pullPrimaryAction(event: PointerEvent<HTMLDivElement>) {
+  if (event.pointerType !== "mouse") return;
+  const action = (event.target as Element).closest<HTMLElement>(magneticAction);
+  if (!action || action.matches(":disabled") ||
+    !window.matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)").matches) return;
+  const box = action.getBoundingClientRect();
+  const offset = (position: number, start: number, size: number) =>
+    `${Math.max(-3, Math.min(3, (position - start - size / 2) * .085))}px`;
+  action.style.setProperty("--pull-x", offset(event.clientX, box.left, box.width));
+  action.style.setProperty("--pull-y", offset(event.clientY, box.top, box.height));
+}
+
+function releasePrimaryAction(event: PointerEvent<HTMLDivElement>) {
+  const action = (event.target as Element).closest<HTMLElement>(magneticAction);
+  if (!action || (event.relatedTarget instanceof Node && action.contains(event.relatedTarget))) return;
+  action.style.removeProperty("--pull-x");
+  action.style.removeProperty("--pull-y");
+}
 async function read(url: string) {
   const r = await fetch(url, { cache: "no-store" });
   const d = await r.json();
@@ -173,22 +230,20 @@ async function read(url: string) {
   return d;
 }
 export default function GrowthWorkbench() {
-  const [view, setView] = useState<View>("overview"),
+  const [view, setView] = useState<View>("customers"),
+    [customerTab, setCustomerTab] = useState<CustomerTab>("assets"),
     [demo, setDemo] = useState(false),
     [data, setData] = useState<DigOverview | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [query, setQuery] = useState(""),
-    [group, setGroup] = useState(-1);
+    [query, setQuery] = useState("");
   const [signals, setSignals] = useState<Signal[]>([]),
     [imported, setImported] = useState<Signal[]>([]),
     [actions, setActions] = useState<Action[]>([]),
     [hidden, setHidden] = useState<Record<string, string>>({}),
     [ready, setReady] = useState(false),
     [feed, setFeed] = useState("正在检查订阅连接");
-  const [selected, setSelected] = useState<Candidate | null>(null),
-    [customer, setCustomer] = useState<DigAccount | null>(null),
-    [importOpen, setImportOpen] = useState(false),
+  const [panelTrail, setPanelTrail] = useState<PanelPage[]>([]),
     [draft, setDraft] = useState<Signal>(newSignal),
     [toast, setToast] = useState(""),
     [discardReason, setDiscardReason] = useState("暂不符合经营方向");
@@ -210,11 +265,51 @@ export default function GrowthWorkbench() {
     >(null);
   const [approvalStage, setApprovalStage] = useState<"" | "draft" | "submitted">("");
   const [approvalNote, setApprovalNote] = useState("");
-  const [accessTarget, setAccessTarget] = useState<DigAccount | null>(null);
   const [accessReason, setAccessReason] = useState("");
   const [accessSaved, setAccessSaved] = useState(false);
+  const viewContent = useRef<HTMLDivElement>(null);
+  const customerContent = useRef<HTMLDivElement>(null);
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const page = panelTrail.at(-1);
+  const selected = page?.kind === "evidence" ? page.signal : null;
+  const customer = page?.kind === "archive" ? page.customer : null;
+  const accessTarget = page?.kind === "access" ? page.customer : null;
+  const importOpen = page?.kind === "import";
+  const panel: PanelInfo | null = page ? {
+    id: panelId(page),
+    kind: page.kind === "archive" || page.kind === "evidence" ? page.kind : "form",
+    title: selected?.title || customer?.name ||
+      (page.kind === "access" ? "申请查看客户档案" : page.kind === "approval" ? "客户准入例外审批" : "导入公开需求"),
+  } : null;
+
+  function openPanel(next: PanelPage, fromPanel = false) {
+    if (!fromPanel) returnFocus.current = document.activeElement as HTMLElement | null;
+    setPanelTrail((trail) => {
+      if (!fromPanel) return [next];
+      const existing = trail.findIndex((item) => panelId(item) === panelId(next));
+      return existing >= 0 ? trail.slice(0, existing + 1) : [...trail, next];
+    });
+  }
+  const closePanel = useCallback(() => {
+    setPanelTrail([]);
+    const trigger = returnFocus.current;
+    returnFocus.current = null;
+    requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    });
+  }, []);
+  function openCustomer(target: DigAccount) {
+    openPanel({ kind: "archive", customer: target });
+  }
+  function openImport() {
+    openPanel({ kind: "import" });
+  }
+  function resetAdmissionPanel() {
+    setApprovalStage("");
+    if (page?.kind === "approval" || page?.kind === "access") closePanel();
+  }
   function requestCustomerAccess(target: DigAccount) {
-    setAccessTarget(target);
+    openPanel({ kind: "access", customer: target });
     setAccessReason("");
     setAccessSaved(false);
     try {
@@ -264,10 +359,8 @@ export default function GrowthWorkbench() {
     }
     setReady(true);
     setAdmission(null);
-    setSelected(null);
-    setCustomer(null);
+    setPanelTrail([]);
     setQuery("");
-    setGroup(-1);
   }, [demo]);
   useEffect(() => {
     if (ready)
@@ -281,48 +374,10 @@ export default function GrowthWorkbench() {
     const t = setTimeout(() => setToast(""), 4000);
     return () => clearTimeout(t);
   }, [toast]);
-  useEffect(() => {
-    const close = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setSelected(null);
-        setCustomer(null);
-        setImportOpen(false);
-      }
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, []);
-  useEffect(() => {
-    if (!selected && !customer && !importOpen) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const trap = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const nodes = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          ".g-drawer button,.g-drawer input,.g-drawer textarea,.g-drawer select,.g-drawer a[href]",
-        ),
-      ).filter((n) => !n.hasAttribute("disabled"));
-      const first = nodes[0],
-        last = nodes[nodes.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last?.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first?.focus();
-      }
-    };
-    document.addEventListener("keydown", trap);
-    const old = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", trap);
-      document.body.style.overflow = old;
-      previous?.focus();
-    };
-  }, [selected, customer, importOpen]);
-  const customers = demo ? demoCustomers : data?.customers || [],
-    opps = demo ? demoOpps : data?.opportunities || [];
+  const customers = demo ? demoCustomers : data?.customers || emptyCustomers,
+    opps = demo ? demoOpps : data?.opportunities || emptyOpportunities;
+  const currentNav = nav.find((item) => item.id === view)!;
+  const currentTab = customerTabs.find((tab) => tab.id === customerTab)!;
   const candidates = useMemo(() => {
     const seen = new Set<string>();
     return [...(demo ? demoSignals : signals), ...imported]
@@ -336,40 +391,21 @@ export default function GrowthWorkbench() {
   }, [demo, signals, imported]);
   const related = (c: DigAccount) =>
     opps.filter((o) => o.customerIds.includes(c.id));
-  const stats = (c: DigAccount) => {
-    const os = related(c);
-    return {
-      history: os.reduce((s, o) => s + Math.max(0, o.actualAmount || 0), 0),
-      active: os.filter(
-        (o) =>
-          !o.actualDate &&
-          !/关闭|终止|签约|成交|丢单/.test(o.status) &&
-          !/签约|交付/.test(o.stage),
-      ),
-    };
-  };
-  const values = customers
-      .map((c) => stats(c).history)
-      .filter((n) => n > 0)
-      .sort((a, b) => a - b),
-    threshold = values.length ? values[Math.floor(values.length / 2)] : 0;
-  const bucket = (c: DigAccount) => {
-    const s = stats(c);
-    return (
-      (s.history > 0 && s.history >= threshold ? 1 : 0) +
-      (s.active.length ? 0 : 2)
-    );
-  };
-  const groupNames = ["机会突破", "重点经营", "分层培育", "挖掘新需求"];
   const list = candidates.filter(
     (s) =>
       !hidden[s.id] &&
       (!query || [s.customer, s.title, s.text].some((v) => v.includes(query))),
   );
   function go(v: View) {
-    setView(v);
-    setQuery("");
-    setGroup(-1);
+    fadeSwap(viewContent.current, () => {
+      setView(v);
+      setQuery("");
+      if (v !== view) {
+        setPanelTrail([]);
+        returnFocus.current = null;
+        window.scrollTo({ top: 0 });
+      }
+    });
   }
   async function check(e: React.FormEvent) {
     e.preventDefault();
@@ -377,8 +413,7 @@ export default function GrowthWorkbench() {
     const startedAt = Date.now();
     setChecking(true);
     setAdmission(null);
-    setApprovalStage("");
-    setAccessTarget(null);
+    resetAdmissionPanel();
     try {
       if (!demo) {
         const response = await fetch("/api/dig/admission", {
@@ -449,7 +484,7 @@ export default function GrowthWorkbench() {
         createdAt: new Date().toISOString(),
       },
     ]);
-    setImportOpen(false);
+    closePanel();
     setDraft(newSignal());
     setToast("公告已导入并完成规则匹配，需求仍需验证");
     go("radar");
@@ -483,7 +518,7 @@ export default function GrowthWorkbench() {
           <button
             className="g-opportunity"
             key={s.id}
-            onClick={() => setSelected(s)}
+            onClick={() => openPanel({ kind: "evidence", signal: s })}
           >
             <div className={`g-signal-icon ${s.matches[0]?.id || ""}`}>
               <Radar size={22} />
@@ -524,7 +559,7 @@ export default function GrowthWorkbench() {
                 ? "没有匹配结果，请调整搜索。"
                 : "导入客户公开公告，系统会匹配能力目录并生成候选。"}
             </p>
-            <button className="g-btn" onClick={() => setImportOpen(true)}>
+            <button className="g-btn" onClick={openImport}>
               导入公开需求
             </button>
           </div>
@@ -532,258 +567,398 @@ export default function GrowthWorkbench() {
       </div>
     );
   }
+  function renderPanelContent() {
+    return (
+      <>
+        {selected && (
+          <>
+
+            <p>{selected.customer}</p>
+            <span className="g-tag">{selected.priority}</span>
+            <h3>01 · 公开需求依据</h3>
+            <p>
+              {selected.kind} · {selected.published} · 截止：
+              {selected.deadline || "未披露"}
+            </p>
+            <blockquote>{selected.text}</blockquote>
+            {selected.url ? (
+              <a
+                className="g-text"
+                href={selected.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                核对原始公告 ↗
+              </a>
+            ) : (
+              <p className="g-footnote">合成演示，未对应真实公告。</p>
+            )}
+            <h3>02 · 为什么匹配这些能力</h3>
+            <p>{selected.reason}</p>
+            {selected.matches.map((c) => (
+              <div className="g-evidence" key={c.id}>
+                <b>{c.name}</b>
+                <p>{c.evidence}</p>
+                <p>{c.limits}</p>
+                <small>{c.status}</small>
+              </div>
+            ))}
+            <h3>03 · 客户关系与建议动作</h3>
+            <p>
+              {customers.some((c) => c.name === selected.customer)
+                ? "完整名称命中客户档案；仍需确认采购主体和实际需求方。"
+                : "尚未明确匹配老客户主体，先核实采购方，不能直接视为老客户机会。"}
+            </p>
+            <p>
+              请客户经理确认建设范围、时间和资格条件；邀请相关产品团队核实交付适配。需求确认后关联飞书商机。
+            </p>
+            <Dropdown label="暂不跟进原因" value={discardReason} onChange={setDiscardReason} options={[
+              "暂不符合经营方向", "客户主体匹配有误", "已有相关商机",
+              "资格或交付条件不满足", "客户已确认无需求",
+            ]} />
+            <div className="g-panel-actions">
+              <button
+                className="g-btn primary"
+                onClick={() => {
+                  const matched = customers.find(
+                    (c) => c.name === selected.customer,
+                  );
+                  if (!matched) {
+                    setToast("尚未匹配客户主体，请先核实采购方");
+                    return;
+                  }
+                  openPanel({ kind: "archive", customer: matched }, true);
+                }}
+              >
+                <FolderOpen size={16} aria-hidden="true" />
+                查看客户档案
+              </button>
+              <button
+                className="g-btn"
+                onClick={() => {
+                  setHidden((h) => ({
+                    ...h,
+                    [selected.id]: discardReason,
+                  }));
+                  closePanel();
+                  setToast("已暂不跟进，可在名单底部恢复");
+                }}
+              >
+                暂不跟进
+              </button>
+            </div>
+          </>
+        )}
+        {customer && <CustomerProfile name={customer.name} industry={customer.industry} city={customer.city} cooperation={opportunityTable(customer)} signals={<>{candidates.filter(s => s.customer === customer.name).map(s => <button className="g-related" key={s.id} onClick={() => {openPanel({ kind: "evidence", signal: s }, true);}}>{s.title}<ArrowUpRight size={16}/></button>)}</>}/>}
+        {importOpen && (
+          <>
+
+            <p>粘贴已核实的公告摘要，立即匹配公司能力。</p>
+            <form onSubmit={addSignal}>
+              <Dropdown
+                label="采购主体完整名称"
+                editable
+                required
+                maxLength={200}
+                value={draft.customer}
+                options={[...new Set(customers.map((customer) => customer.name))]}
+                onChange={(customer) => setDraft((current) => ({ ...current, customer }))}
+              />
+              <label>
+                公告标题
+                <input
+                  required
+                  maxLength={300}
+                  value={draft.title}
+                  onChange={(e) =>
+                    setDraft({ ...draft, title: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                原始来源链接
+                <input
+                  required
+                  type="url"
+                  value={draft.url}
+                  onChange={(e) =>
+                    setDraft({ ...draft, url: e.target.value })
+                  }
+                  placeholder="https://"
+                />
+              </label>
+              <div className="g-action-fields">
+                <label>
+                  发布日期
+                  <input
+                    required
+                    type="date"
+                    max={localDate()}
+                    value={draft.published}
+                    onChange={(e) =>
+                      setDraft({ ...draft, published: e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  截止日期（选填）
+                  <input
+                    type="date"
+                    value={draft.deadline}
+                    onChange={(e) =>
+                      setDraft({ ...draft, deadline: e.target.value })
+                    }
+                  />
+                </label>
+              </div>
+              <Dropdown
+                label="信号类型"
+                value={draft.kind}
+                options={["采购意向", "招标公告", "公开动态", "中标结果"]}
+                onChange={(kind) => setDraft((current) => ({ ...current, kind: kind as Signal["kind"] }))}
+              />
+              <label>
+                需求原文摘录
+                <textarea
+                  required
+                  maxLength={10000}
+                  rows={6}
+                  value={draft.text}
+                  onChange={(e) =>
+                    setDraft({ ...draft, text: e.target.value })
+                  }
+                  placeholder="保留实际需求，不添加原文中未披露的信息"
+                />
+              </label>
+              <button className="g-btn primary">
+                导入并匹配 <Sparkles size={16} />
+              </button>
+              <p className="g-footnote">
+                导入不自动认定主体关系、投标资格或真实需求。
+              </p>
+            </form>
+          </>
+        )}
+        {accessTarget && admission && (
+          accessSaved ? (
+            <div className="g-panel-status" role="status">
+              <h3>查看申请已暂存 · 待审批</h3>
+              <p>客户：{accessTarget.name}</p>
+              <p>申请理由：{accessReason}</p>
+              <p>审批通过后方可查看客户档案。</p>
+              <small>申请仅保存在本浏览器，尚未发送负责人；审批服务接入后可正式提交。</small>
+            </div>
+          ) : (
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              const reason = accessReason.trim();
+              if (!reason) { setToast("请填写查看理由"); return; }
+              try {
+                localStorage.setItem(`dig-customer-access:${accessTarget.id}`, JSON.stringify({
+                  customerId: accessTarget.id, customerName: accessTarget.name, owner: admission.owner || "",
+                  reason, status: "pending", createdAt: new Date().toISOString(),
+                }));
+                setAccessReason(reason);
+                setAccessSaved(true);
+              } catch {
+                setToast("申请未保存，请检查浏览器存储后重试");
+              }
+            }}>
+              <p>客户：{accessTarget.name} · 负责人：{admission.owner || "待确认"}</p>
+              <label>
+                查看理由
+                <textarea required maxLength={1000} value={accessReason}
+                  onChange={(event) => setAccessReason(event.target.value)}
+                  placeholder="请说明业务合作背景及查看用途" />
+              </label>
+              <p className="g-footnote">审批通过后方可查看。当前申请暂存本浏览器，尚未发送负责人。</p>
+              <div className="g-panel-actions">
+                <button className="g-btn primary" disabled={!accessReason.trim()}>保存查看申请</button>
+                <button type="button" className="g-btn" onClick={closePanel}>取消</button>
+              </div>
+            </form>
+          )
+        )}
+        {page?.kind === "approval" && admission && (
+          approvalStage === "submitted" ? (
+            <div className="g-panel-status" role="status">
+              <h3>演示审批已发起</h3>
+              <p>DEMO-APPROVAL-001 · 待人工审批（模拟）</p>
+              <p>下一节点：法务复核 → 合规审批</p>
+              <small>仅保存在本浏览器，未发送真实飞书审批。</small>
+              <button className="g-text" onClick={() => setApprovalStage("draft")}>查看申请内容</button>
+            </div>
+          ) : (
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              const record = {
+                id: "DEMO-APPROVAL-001", name: admission.facts.name, score: admission.score,
+                note: approvalNote, status: "待人工审批（模拟）", createdAt: new Date().toISOString(),
+              };
+              try {
+                localStorage.setItem("dig-admission-demo-approval", JSON.stringify(record));
+              } catch {
+                setToast("审批草稿未保存，请检查浏览器存储后重试");
+                return;
+              }
+              setApprovalStage("submitted");
+            }}>
+              <p>{admission.facts.name} · 准入分 {admission.score}</p>
+              <p>审批流程：销售提交 → 法务复核 → 合规审批（模拟）</p>
+              <label>申请说明<textarea required value={approvalNote} onChange={(event) => setApprovalNote(event.target.value)} /></label>
+              <div className="g-panel-actions">
+                <button className="g-btn primary">提交演示审批</button>
+                <button type="button" className="g-btn" onClick={() => { setApprovalStage(""); closePanel(); }}>取消</button>
+              </div>
+            </form>
+          )
+        )}
+      </>
+    );
+  }
+
   return (
-    <div className="growth-app">
+    <div className="growth-app" onPointerMove={pullPrimaryAction} onPointerOut={releasePrimaryAction}>
       <aside className="g-sidebar">
-        <div className="g-brand">
-          <Layers3 size={30} />
-          <div>
-            DIG <small>客户智能经营</small>
-          </div>
-        </div>
-        <div className="g-workspace">
-          <span className="g-dot" />
-          客户增长工作空间<small>从准入到下一次合作</small>
-        </div>
-        <p className="g-nav-label">客户经营</p>
-        <nav>
-          {nav.map((n) => (
+        <nav aria-label="主导航">
+          {nav.map((item) => (
             <button
-              key={n.id}
-              className={view === n.id ? "active" : ""}
-              onClick={() => go(n.id)}
+              key={item.id}
+              className={view === item.id ? "active" : ""}
+              aria-current={view === item.id ? "page" : undefined}
+              aria-label={item.label}
+              title={item.label}
+              onClick={() => go(item.id)}
             >
-              <n.icon size={18} />
-              {n.label}
-              
+              <span className="g-nav-icon"><item.icon size={19} /></span>
+              <span className="g-nav-text">{item.label}</span>
             </button>
           ))}
         </nav>
         <div className="g-sidebar-bottom">
-          <a href="https://dcholdings.feishu.cn/app/NMZEbyNx5a0Fews9qHWctsNVn9g?pageId=pgentnD0whSh1vQB" target="_blank" rel="noopener noreferrer">
-            <Building2 size={17} />
-            DIG端到端系统 <ArrowUpRight size={14} />
+          <a
+            href="https://dcholdings.feishu.cn/app/NMZEbyNx5a0Fews9qHWctsNVn9g?pageId=pgentnD0whSh1vQB"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="DIG 端到端系统"
+            title="DIG 端到端系统"
+          >
+            <Network size={19} aria-hidden="true" />
+            <span className="g-nav-text">DIG 端到端系统 <ArrowUpRight size={13} /></span>
           </a>
-          <div>
-            <span className="g-dot" />
-            {demo ? "演示工作空间" : "真实数据工作空间"}
-            <small>{demo ? "与真实记录隔离" : "客户与商机只读接入"}</small>
-          </div>
         </div>
       </aside>
       <div className="g-body">
         <header className="g-top">
-          <span>
-            客户经营 <ChevronRight size={14} />{" "}
-            {nav.find((n) => n.id === view)?.label}
-          </span>
-          <div>
+          <div className="g-brand">
+            <span className="g-brand-mark"><Layers3 size={22} /></span>
+            <strong>DIG</strong>
+            <small>客户智能经营</small>
+          </div>
+          <div className="g-top-trail" aria-label="当前位置">
+            {currentNav.label}
+            {view === "customers" && <><ChevronRight size={14} />{currentTab.label}</>}
+          </div>
+          <div className="g-top-tools">
+            <a className="g-source-pill" href={demo ? undefined : "/data"} title={demo ? "合成演示" : "查看源数据"}>
+              <i className={data || demo ? "connected" : ""} />
+              {demo ? "合成演示" : busy ? "正在读取" : data ? "飞书只读" : "数据未连接"}
+            </a>
             <button
               className="g-icon-btn"
               aria-label="刷新数据"
+              title="刷新数据"
               disabled={busy}
               onClick={() => void refresh()}
             >
-              <RefreshCw size={17} />
+              <RefreshCw size={16} />
             </button>
-            <span className="g-avatar">DIG</span>
           </div>
         </header>
+        <WorkspacePanels
+          panel={panel}
+          content={panel ? renderPanelContent() : null}
+          onClose={closePanel}
+          onBack={panelTrail.length > 1 ? () => setPanelTrail((trail) => trail.slice(0, -1)) : undefined}
+        >
         <main className="g-main">
+          <div ref={viewContent}>
           <div className="g-heading">
             <div>
-              <p className="g-eyebrow">
-                CUSTOMER INTELLIGENCE / {demo ? "DEMO" : "CONNECTED"}
-              </p>
-              <h1>{nav.find((n) => n.id === view)?.label}</h1>
-              <p>
-                {
-                  {
-                    overview:
-                      "盘点现有客户规模、结构与区域覆盖，查看各地销售员和客户。",
-                    admission:
-                      "自动完成信息核查，让专业判断集中在需要关注的例外。",
-                    radar:
-                      "从已成单标杆找到切入点，把合作延伸、机会重启与客户动态变成具体跟进。",
-                    customers:
-                      "看清历史合作与当前机会，为不同客户选择合适的经营动作。",
-                  }[view]
-                }
-              </p>
+              <h1>{currentNav.label}</h1>
+              <p>{descriptions[view]}</p>
             </div>
-            <button
-              className="g-btn primary"
-              onClick={() => {
-                if (view === "admission")
-                  document.getElementById("company-name")?.focus();
-                else if (view === "overview") go("customers");
-                else if (view === "radar") {
-                  const search = document.querySelector<HTMLInputElement>('[aria-label="搜索增长机会"]');
-                  search?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  search?.focus({ preventScroll: true });
-                }
-                else setImportOpen(true);
-              }}
-            >
-              {view === "radar" ? <Search size={16} /> : <Plus size={16} />}
-              {view === "admission"
-                ? "开始客户核查"
-                : view === "overview"
-                  ? "查看客户名单"
-                  : view === "radar" ? "搜索客户与商机" : "导入公开需求"}
-            </button>
+            {view === "radar" && (
+              <button className="g-btn primary" onClick={openImport}>
+                <Plus size={16} />导入公开需求
+              </button>
+            )}
           </div>
-          {view !== "admission" && <div className={`g-banner ${demo ? "demo" : ""}`}>
-            <ShieldCheck size={16} />
-            {demo
-              ? "评选演示模式：企业、公告与核查结果均为合成示例；操作仅保存在本浏览器。"
-              : view === "overview"
-                ? "客户与商机来自飞书，按客户记录统计；地区依据客户城市归属，缺失信息单独列示。"
-                : "真实客户来自飞书；增长建议关联现有商机与标杆案例，跟进记录保存在本浏览器。"}
-            {!demo && <a href="/data">查看源数据 ↗</a>}
-          </div>}
           {view === "customers" && (
-            <>
-              <div className="g-metrics">
-                {[
-                  {
-                    label: "客户资产",
-                    value: !demo && !data ? "—" : customers.length,
-                    sub: demo ? "合成客户档案" : "飞书客户主表",
-                    icon: Building2,
-                  },
-                  {
-                    label: "待验证需求",
-                    value: list.filter((s) => s.priority === "优先验证").length,
-                    sub: "公开信号不计入有效商机",
-                    icon: Radar,
-                  },
-                  {
-                    label: "需求覆盖客户",
-                    value: new Set(candidates.map((s) => s.customer)).size,
-                    sub: "公开需求涉及的客户主体",
-                    icon: Building2,
-                  },
-                  {
-                    label: "可匹配能力",
-                    value: capabilities.length,
-                    sub: "产品、服务与场景能力",
-                    icon: Layers3,
-                  },
-                ].map((m) => (
-                  <article key={m.label}>
-                    <div>
-                      <span>{m.label}</span>
-                      <m.icon size={18} />
-                    </div>
-                    <strong>{m.value}</strong>
-                    <small>{m.sub}</small>
-                  </article>
-                ))}
+            <Tabs.Root value={customerTab} activationMode="manual" onValueChange={(value) => {
+              if (value === "assets" || value === "value") {
+                fadeSwap(customerContent.current, () => setCustomerTab(value));
+              }
+            }}>
+              <div className="g-tab-bar">
+                <Tabs.List className="g-customer-tabs" aria-label="客户经营页签">
+                  {customerTabs.map((tab) => (
+                    <Tabs.Trigger key={tab.id} value={tab.id}>
+                      <tab.icon size={16} />{tab.label}
+                    </Tabs.Trigger>
+                  ))}
+                </Tabs.List>
+                <button className="g-btn g-list-jump" onClick={() => {
+                  const listId = customerTab === "assets" ? "asset-customer-list" : "tier-customer-list";
+                  const section = document.getElementById(listId);
+                  section?.scrollIntoView({ block: "start" });
+                  section?.focus({ preventScroll: true });
+                }}>
+                  <List size={16} />查看客户名单
+                </button>
               </div>
-              <div className="g-two-col">
-                <section className="g-card">
-                  <div className="g-card-heading">
-                    <div>
-                      <h2>客户价值与机会</h2>
-                      <p>按历史成单贡献与当前未关闭、未签约机会分层</p>
-                    </div>
-                    <span className="g-tag">可点击查看名单</span>
-                  </div>
-                  <div className="g-matrix-wrap">
-                    <div className="g-axis-y">当前已识别机会 ↑</div>
-                    <div className="g-matrix">
-                      {groupNames.map((name, i) => (
-                        <button
-                          key={name}
-                          className={`cell-${i} ${group === i ? "selected" : ""}`}
-                          onClick={() => {
-                            setGroup(group === i ? -1 : i);
-                            setView("customers");
-                          }}
-                        >
-                          <span>
-                            {name} <ArrowUpRight size={14} />
-                          </span>
-                          <strong>
-                            {customers.filter((c) => bucket(c) === i).length}
-                            <small> 家</small>
-                          </strong>
-                          <p>
-                            {
-                              [
-                                "验证需求，推进首单",
-                                "持续投入，协调资源",
-                                "补充信息，按需触达",
-                                "回访老客户，发现下一单",
-                              ][i]
-                            }
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="g-axis-x">历史实际成单贡献 →</div>
-                  </div>
-                  <p className="g-footnote">
-                    高贡献：正成单金额中位数 {money(threshold)}{" "}
-                    及以上；无历史金额不等于低价值。当前机会按源阶段与状态规则识别，财务收入与增长潜力待核实。
-                  </p>
-                </section>
-                <section className="g-card g-focus">
-                  <div className="g-card-heading">
-                    <div>
-                      <h2>两条主线，一次持续经营</h2>
-                      <p>从客户进入，到下一次需求被发现</p>
-                    </div>
-                  </div>
-                  <button onClick={() => go("admission")}>
-                    <div className="g-step-icon">
-                      <ShieldCheck size={23} />
-                    </div>
-                    <div>
-                      <small>01 / 新客户准入</small>
-                      <h3>把标准核查自动完成</h3>
-                      <p>主体识别 · 风险依据 · 规则分流</p>
-                    </div>
-                    <ArrowRight size={18} />
-                  </button>
-                  <button onClick={() => go("radar")}>
-                    <div className="g-step-icon purple">
-                      <Radar size={23} />
-                    </div>
-                    <div>
-                      <small>02 / 老客户二次增长</small>
-                      <h3>让下一次合作有迹可循</h3>
-                      <p>公开需求 · 能力匹配 · 行动闭环</p>
-                    </div>
-                    <ArrowRight size={18} />
-                  </button>
-                  <div className="g-feed">
-                    <span className="g-dot" />
-                    {demo ? "演示信号已载入" : feed}
-                  </div>
-                </section>
+              {!demo && error && !data && (
+                <div className="g-error" role="status">
+                  客户数据暂不可用：{error}
+                  <button type="button" onClick={() => void refresh()}>重试</button>
+                </div>
+              )}
+              <div ref={customerContent}>
+                <Tabs.Content value="assets" forceMount hidden={customerTab !== "assets"}>
+                  <CustomerAssets
+                    customers={customers}
+                    opportunities={opps}
+                    onCustomer={openCustomer}
+                    loading={!demo && !data && !error}
+                  />
+                </Tabs.Content>
+                <Tabs.Content value="value" forceMount hidden={customerTab !== "value"}>
+                  <CustomerValueTiers
+                    customers={customers}
+                    opportunities={opps}
+                    signals={candidates}
+                    available={demo || data !== null}
+                    onCustomer={openCustomer}
+                    onAdmission={() => go("admission")}
+                    onGrowth={() => go("radar")}
+                  />
+                </Tabs.Content>
               </div>
-            </>
+            </Tabs.Root>
           )}
-          {view === "overview" && (
-            <CustomerAssets
-              customers={customers}
-              opportunities={opps}
-              onCustomer={setCustomer}
-              loading={!demo && busy && !data}
-            />
+          {view === "radar" && (
+            <OpportunityGrowth customers={customers} opportunities={opps} signals={candidates}
+              onCustomer={openCustomer} demo={demo} feedLabel={feed} />
           )}
-          {view === "radar" && <OpportunityGrowth customers={customers} opportunities={opps} signals={candidates} onCustomer={setCustomer} demo={demo}/>}
           {view === "admission" && (
-            <div className="g-two-col">
+            <AdmissionPanels phase={checking ? "loading" : admission ? "result" : "form"} form={
               <section className="g-card g-form-card">
                 <div className="g-card-heading">
                   <div>
                     <h2>新客户核查</h2>
                     <p>一次提交，汇集主体与风险证据</p>
                   </div>
-                  <ShieldCheck size={22} />
+                  <ScanSearch size={22} aria-hidden="true" />
                 </div>
                 <form onSubmit={check}>
                   <label>
@@ -795,34 +970,18 @@ export default function GrowthWorkbench() {
                       maxLength={200}
                       placeholder="请输入工商登记的完整企业名称"
                       value={company}
-                      onChange={(e) => {setCompany(e.target.value);setAdmission(null);setApprovalStage("");setAccessTarget(null);}}
+                      onChange={(e) => {setCompany(e.target.value);setAdmission(null);resetAdmissionPanel();}}
                     />
                   </label>
                   {demo && (
-                    <label>
-                      演示核查场景
-                      <select
-                        value={scenario}
-                        onChange={(e) => setScenario(e.target.value)}
-                      >
-                        <option value="normal">资料完整 · 无命中项</option>
-                        <option value="small">小微企业 · 无命中项</option>
-                        <option value="risk">命中风险 · 人工复核</option>
-                        <option value="missing">必查信息不完整</option>
-                        <option value="blocked">主体注销 · 停止自动准入</option>
-                      </select>
-                    </label>
+                    <Dropdown label="演示核查场景" value={scenario} onChange={setScenario} options={[
+                      { value: "normal", label: "资料完整 · 无命中项" },
+                      { value: "small", label: "小微企业 · 无命中项" },
+                      { value: "risk", label: "命中风险 · 人工复核" },
+                      { value: "missing", label: "必查信息不完整" },
+                      { value: "blocked", label: "主体注销 · 停止自动准入" },
+                    ]} />
                   )}
-                  <div className="g-process">
-                    {["确认主体", "获取信息", "规则校验", "输出建议"].map(
-                      (s, i) => (
-                        <span key={s}>
-                          <b>{i + 1}</b>
-                          {s}
-                        </span>
-                      ),
-                    )}
-                  </div>
                   <button className="g-btn primary" disabled={checking}>
                     {checking
                       ? "正在核查…"
@@ -831,18 +990,29 @@ export default function GrowthWorkbench() {
                         : "提交客户核查"}
                     <ArrowRight size={16} />
                   </button>
+                  <div className="g-process-space">
+                    <div className="g-process" role="group" aria-label="客户核查步骤">
+                      {["确认主体", "获取信息", "规则校验", "输出建议"].map(
+                        (step, index) => <span key={step}><b>{index + 1}</b>{step}</span>,
+                      )}
+                    </div>
+                  </div>
                 </form>
               </section>
+            } result={(resetRatio) => (
               <section className="g-card g-result">
                 <div className="g-card-heading">
                   <div>
                     <h2>准入核查结果</h2>
-                    <p>{checking ? "正在整理核查结果" : admission?.source || "等待提交客户信息"}</p>
+                    <p aria-live="polite">{checking ? "正在整理核查结果" : admission?.source || "等待提交客户信息"}</p>
                   </div>
+                  {resetRatio && <button type="button" className="g-text g-admission-auto" onClick={resetRatio}>
+                    恢复自动比例
+                  </button>}
                 </div>
                 {checking ? (
                   <div className="g-admission-loading" role="status" aria-live="polite">
-                    <RefreshCw size={38} className="g-admission-spinner" aria-hidden="true" />
+                    <LoaderCircle size={38} className="g-admission-spinner" aria-hidden="true" />
                     <h3>正在准备准入核查结果</h3>
                     <p>汇集主体资料与风险依据，请稍候…</p>
                     <div className="g-admission-loading-track" aria-hidden="true"><span /></div>
@@ -861,58 +1031,49 @@ export default function GrowthWorkbench() {
                       <h2>{admission.decision}</h2>
                     </div>
                     <div className="g-result-content">
-                      <p>企业：{admission.facts.name}</p>
-                      {admission.demoCase !== "existing" && <><p>
-                        登记状态：{admission.facts.status}
-                        {admission.small && ` · 小微企业：${admission.small}`}
-                      </p>
-                      <p>主体编号：{admission.facts.creditCode || "待核实"}</p></>}
-                      {admission.reasons.map((r) => (
-                        <div className="g-reason" key={r}>
-                          <ShieldCheck size={16} />
-                          {r}
-                        </div>
-                      ))}
-                      {admission.demoCase === "existing" && <div className="g-existing-owner"><Building2 size={17} /> 当前负责人：<strong>{admission.owner || "待确认（暂无关联销售员）"}</strong><small>归属来自关联商机销售员</small></div>}
-                      {admission.dimensions && <div className="g-demo-dimensions">{admission.dimensions.map(([label, score, max]) => <div key={label}><span>{label}</span><b>{score} / {max}</b></div>)}</div>}
-                      {admission.demoCase === "existing" && <div className="g-admission-result-actions">{admission.existingCustomers?.map(c => <button key={c.id} className="g-btn" onClick={() => requestCustomerAccess(c)}>申请查看客户档案{admission.existingCustomers!.length > 1 ? `（${c.number || c.id}）` : ""} <ArrowUpRight size={14} /></button>)}</div>}
-                      {admission.demoCase === "existing" && accessTarget && <div className="g-demo-approval">
-                        {accessSaved ? <div className="g-demo-approval-success" role="status"><h3>查看申请已暂存 · 待审批</h3><p>客户：{accessTarget.name}</p><p>申请理由：{accessReason}</p><p>审批通过后方可查看客户档案。</p><small>申请仅保存在本浏览器，尚未发送负责人；审批服务接入后可正式提交。</small></div> :
-                          <form onSubmit={e => {
-                            e.preventDefault();
-                            const reason = accessReason.trim();
-                            if (!reason) { setToast("请填写查看理由"); return; }
-                            try {
-                              localStorage.setItem(`dig-customer-access:${accessTarget.id}`, JSON.stringify({customerId:accessTarget.id,customerName:accessTarget.name,owner:admission.owner || "",reason,status:"pending",createdAt:new Date().toISOString()}));
-                              setAccessReason(reason); setAccessSaved(true);
-                            } catch { setToast("申请未保存，请检查浏览器存储后重试"); }
-                          }}>
-                            <h3>申请查看客户档案</h3><p>客户：{accessTarget.name}</p><p>负责人：{admission.owner || "待确认"}</p>
-                            <label>查看理由<textarea required maxLength={1000} value={accessReason} onChange={e => setAccessReason(e.target.value)} placeholder="请说明业务合作背景及查看用途" /></label>
-                            <p className="g-footnote">审批通过后方可查看。当前申请暂存本浏览器，尚未发送负责人。</p>
-                            <button className="g-btn primary" disabled={!accessReason.trim()}>保存查看申请</button><button type="button" className="g-btn" onClick={() => setAccessTarget(null)}>取消</button>
-                          </form>}
-                      </div>}
-                      {admission.demoCase === "pass" && <div className="g-admission-result-actions"><a className="g-btn primary" href={CUSTOMER_CREATE_FORM} target="_blank" rel="noreferrer">开始填写新客户 <ArrowUpRight size={16} /></a><small>打开飞书建档表单，请在表单填写客户名称。</small></div>}
-                      {admission.demoCase === "risk" && <div className="g-demo-approval">
-                        {!approvalStage && <div className="g-admission-result-actions"><button className="g-btn primary" onClick={() => {setApprovalStage("draft");setApprovalNote("拟开展数据治理项目合作，请法务与合规复核风险处置情况及合作条件。");}}>发起审批 <ArrowRight size={16} /></button></div>}
-                        {approvalStage === "draft" && <form onSubmit={e => {e.preventDefault();const record={id:"DEMO-APPROVAL-001",name:admission.facts.name,score:admission.score,note:approvalNote,status:"待人工审批（模拟）",createdAt:new Date().toISOString()};try{localStorage.setItem("dig-admission-demo-approval",JSON.stringify(record));}catch{}setApprovalStage("submitted");}}>
-                          <h3>客户准入例外审批 · 演示</h3><p>{admission.facts.name} · 准入分 {admission.score}</p><p>审批流程：销售提交 → 法务复核 → 合规审批（模拟）</p>
-                          <label>申请说明<textarea required value={approvalNote} onChange={e=>setApprovalNote(e.target.value)} /></label>
-                          <button className="g-btn primary">提交演示审批</button><button type="button" className="g-btn" onClick={()=>setApprovalStage("")}>取消</button>
-                        </form>}
-                        {approvalStage === "submitted" && <div role="status" className="g-demo-approval-success"><h3>演示审批已发起</h3><p>DEMO-APPROVAL-001 · 待人工审批（模拟）</p><p>下一节点：法务复核 → 合规审批</p><small>仅保存在本浏览器，未发送真实飞书审批。</small><button className="g-text" onClick={()=>setApprovalStage("draft")}>查看申请内容</button></div>}
-                      </div>}
-                      {admission.errors?.map((e) => (
-                        <p role="alert" key={e}>
-                          {e}
+                      <section className="g-result-facts" aria-label="企业信息">
+                        <p>企业：{admission.facts.name}</p>
+                        {admission.demoCase !== "existing" && <><p>
+                          登记状态：{admission.facts.status}
+                          {admission.small && ` · 小微企业：${admission.small}`}
                         </p>
-                      ))}
-                      <p className="g-footnote">
-                        {admission.notice} · 规则版本 {admission.ruleVersion}
-                        {admission.checkedAt &&
-                          ` · ${new Date(admission.checkedAt).toLocaleString("zh-CN")}`}
-                      </p>
+                        <p>主体编号：{admission.facts.creditCode || "待核实"}</p></>}
+                        {admission.demoCase === "existing" && <div className="g-existing-owner"><UserRound size={17} aria-hidden="true" /> 当前负责人：<strong>{admission.owner || "待确认（暂无关联销售员）"}</strong><small>归属来自关联商机销售员</small></div>}
+                      </section>
+                      <section className="g-result-feedback" aria-label="核查反馈">
+                        {admission.reasons.map((r) => (
+                          <div className="g-reason" key={r}>
+                            <ClipboardCheck size={16} aria-hidden="true" />
+                            {r}
+                          </div>
+                        ))}
+                        {admission.dimensions && <div className="g-demo-dimensions">{admission.dimensions.map(([label, score, max]) => <div key={label}><span>{label}</span><b>{score} / {max}</b></div>)}</div>}
+                        {admission.demoCase === "existing" && <div className="g-admission-result-actions">{admission.existingCustomers?.map(c => <button key={c.id} className="g-btn" onClick={() => requestCustomerAccess(c)}>申请查看客户档案{admission.existingCustomers!.length > 1 ? `（${c.number || c.id}）` : ""} <ArrowUpRight size={14} /></button>)}</div>}
+                        {admission.demoCase === "pass" && <div className="g-admission-result-actions"><a className="g-btn primary" href={CUSTOMER_CREATE_FORM} target="_blank" rel="noreferrer">开始填写新客户 <ArrowUpRight size={16} /></a><small>打开飞书建档表单，请在表单填写客户名称。</small></div>}
+                        {admission.demoCase === "risk" && (
+                          <div className="g-admission-result-actions">
+                            <button className="g-btn primary" onClick={() => {
+                              if (!approvalStage) {
+                                setApprovalStage("draft");
+                                setApprovalNote("拟开展数据治理项目合作，请法务与合规复核风险处置情况及合作条件。");
+                              }
+                              openPanel({ kind: "approval" });
+                            }}>
+                              {approvalStage === "submitted" ? "查看演示审批" : "发起审批"} <ArrowRight size={16} />
+                            </button>
+                          </div>
+                        )}
+                        {admission.errors?.map((e) => (
+                          <p role="alert" key={e}>
+                            {e}
+                          </p>
+                        ))}
+                        <p className="g-footnote">
+                          {admission.notice} · 规则版本 {admission.ruleVersion}
+                          {admission.checkedAt &&
+                            ` · ${new Date(admission.checkedAt).toLocaleString("zh-CN")}`}
+                        </p>
+                      </section>
                     </div>
                   </>
                 ) : (
@@ -923,93 +1084,9 @@ export default function GrowthWorkbench() {
                   </div>
                 )}
               </section>
-            </div>
+            )} />
           )}
-          {view === "customers" && (
-            <section className="g-card">
-              <div className="g-card-heading">
-                <div>
-                  <h2>{group < 0 ? "客户经营名单" : groupNames[group]}</h2>
-                  <p>
-                    客户可能同时有多个项目与商机，不用单一阶段代替客户生命周期。
-                  </p>
-                </div>
-                <label className="g-search">
-                  <Search size={16} />
-                  <input
-                    aria-label="搜索客户"
-                    placeholder="搜索客户名称"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="g-table-scroll">
-                <table className="g-table">
-                  <thead>
-                    <tr>
-                      <th>客户 / 行业</th>
-                      <th>历史成单贡献</th>
-                      <th>当前机会</th>
-                      <th>公开需求信号</th>
-                      <th>经营方向</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customers
-                      .filter(
-                        (c) =>
-                          (group < 0 || bucket(c) === group) &&
-                          c.name.includes(query),
-                      )
-                      .map((c) => (
-                        <tr key={c.id}>
-                          <td>
-                            <b>{c.name}</b>
-                            <small>
-                              {c.industry || "行业待补充"} ·{" "}
-                              {c.applicant || "负责人待核实"}
-                            </small>
-                          </td>
-                          <td>
-                            {stats(c).history
-                              ? money(stats(c).history)
-                              : "未发现正成单金额"}
-                          </td>
-                          <td>{stats(c).active.length} 条</td>
-                          <td>
-                            {
-                              candidates.filter((s) => s.customer === c.name)
-                                .length
-                            }{" "}
-                            条
-                          </td>
-                          <td>
-                            <span className="g-tag">
-                              {groupNames[bucket(c)]}
-                            </span>
-                          </td>
-                          <td>
-                            <button
-                              className="g-text"
-                              onClick={() => setCustomer(c)}
-                            >
-                              查看档案 ↗
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-                {!customers.length && (
-                  <div className="g-empty">
-                    尚无客户数据，请检查数据连接或切换演示模式。
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+          </div>
           <footer className="g-footer">
             <span>DIG · 每次经营有依据，每个机会有下一步</span>
             <span>
@@ -1019,241 +1096,8 @@ export default function GrowthWorkbench() {
             </span>
           </footer>
         </main>
+        </WorkspacePanels>
       </div>
-      {(selected || customer || importOpen) && (
-        <div
-          className="g-overlay"
-          onClick={() => {
-            setSelected(null);
-            setCustomer(null);
-            setImportOpen(false);
-          }}
-        >
-          <section
-            className={`g-drawer ${customer ? "g-drawer-profile" : ""}`}
-            role="dialog"
-            aria-modal="true"
-            aria-label={
-              importOpen ? "导入公开需求" : selected?.title || customer?.name
-            }
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              autoFocus
-              className="g-close"
-              aria-label="关闭"
-              onClick={() => {
-                setSelected(null);
-                setCustomer(null);
-                setImportOpen(false);
-              }}
-            >
-              <X size={20} />
-            </button>
-            {selected && (
-              <>
-                <span className="g-eyebrow">OPPORTUNITY EVIDENCE</span>
-                <h2>{selected.title}</h2>
-                <p>{selected.customer}</p>
-                <span className="g-tag">{selected.priority}</span>
-                <h3>01 · 公开需求依据</h3>
-                <p>
-                  {selected.kind} · {selected.published} · 截止：
-                  {selected.deadline || "未披露"}
-                </p>
-                <blockquote>{selected.text}</blockquote>
-                {selected.url ? (
-                  <a
-                    className="g-text"
-                    href={selected.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    核对原始公告 ↗
-                  </a>
-                ) : (
-                  <p className="g-footnote">合成演示，未对应真实公告。</p>
-                )}
-                <h3>02 · 为什么匹配这些能力</h3>
-                <p>{selected.reason}</p>
-                {selected.matches.map((c) => (
-                  <div className="g-evidence" key={c.id}>
-                    <b>{c.name}</b>
-                    <p>{c.evidence}</p>
-                    <p>{c.limits}</p>
-                    <small>{c.status}</small>
-                  </div>
-                ))}
-                <h3>03 · 客户关系与建议动作</h3>
-                <p>
-                  {customers.some((c) => c.name === selected.customer)
-                    ? "完整名称命中客户档案；仍需确认采购主体和实际需求方。"
-                    : "尚未明确匹配老客户主体，先核实采购方，不能直接视为老客户机会。"}
-                </p>
-                <p>
-                  请客户经理确认建设范围、时间和资格条件；邀请相关产品团队核实交付适配。需求确认后关联飞书商机。
-                </p>
-                <label>
-                  暂不跟进原因
-                  <select
-                    value={discardReason}
-                    onChange={(e) => setDiscardReason(e.target.value)}
-                  >
-                    <option>暂不符合经营方向</option>
-                    <option>客户主体匹配有误</option>
-                    <option>已有相关商机</option>
-                    <option>资格或交付条件不满足</option>
-                    <option>客户已确认无需求</option>
-                  </select>
-                </label>
-                <div className="g-drawer-actions">
-                  <button
-                    className="g-btn primary"
-                    onClick={() => {
-                      const matched = customers.find(
-                        (c) => c.name === selected.customer,
-                      );
-                      if (!matched) {
-                        setToast("尚未匹配客户主体，请先核实采购方");
-                        return;
-                      }
-                      setSelected(null);
-                      setCustomer(matched);
-                    }}
-                  >
-                    <Building2 size={16} />
-                    查看客户档案
-                  </button>
-                  <button
-                    className="g-btn"
-                    onClick={() => {
-                      setHidden((h) => ({
-                        ...h,
-                        [selected.id]: discardReason,
-                      }));
-                      setSelected(null);
-                      setToast("已暂不跟进，可在名单底部恢复");
-                    }}
-                  >
-                    暂不跟进
-                  </button>
-                </div>
-              </>
-            )}
-            {customer && <CustomerProfile name={customer.name} industry={customer.industry} city={customer.city} cooperation={opportunityTable(customer)} signals={<>{candidates.filter(s => s.customer === customer.name).map(s => <button className="g-related" key={s.id} onClick={() => {setCustomer(null);setSelected(s);}}>{s.title}<ArrowUpRight size={16}/></button>)}</>}/>}
-            {importOpen && (
-              <>
-                <span className="g-eyebrow">NEW PUBLIC SIGNAL</span>
-                <h2>导入一条公开需求</h2>
-                <p>粘贴已核实的公告摘要，立即匹配公司能力。</p>
-                <form onSubmit={addSignal}>
-                  <label>
-                    采购主体完整名称
-                    <input
-                      required
-                      maxLength={200}
-                      value={draft.customer}
-                      onChange={(e) =>
-                        setDraft({ ...draft, customer: e.target.value })
-                      }
-                      list="customer-names"
-                    />
-                    <datalist id="customer-names">
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.name} />
-                      ))}
-                    </datalist>
-                  </label>
-                  <label>
-                    公告标题
-                    <input
-                      required
-                      maxLength={300}
-                      value={draft.title}
-                      onChange={(e) =>
-                        setDraft({ ...draft, title: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    原始来源链接
-                    <input
-                      required
-                      type="url"
-                      value={draft.url}
-                      onChange={(e) =>
-                        setDraft({ ...draft, url: e.target.value })
-                      }
-                      placeholder="https://"
-                    />
-                  </label>
-                  <div className="g-action-fields">
-                    <label>
-                      发布日期
-                      <input
-                        required
-                        type="date"
-                        max={localDate()}
-                        value={draft.published}
-                        onChange={(e) =>
-                          setDraft({ ...draft, published: e.target.value })
-                        }
-                      />
-                    </label>
-                    <label>
-                      截止日期（选填）
-                      <input
-                        type="date"
-                        value={draft.deadline}
-                        onChange={(e) =>
-                          setDraft({ ...draft, deadline: e.target.value })
-                        }
-                      />
-                    </label>
-                  </div>
-                  <label>
-                    信号类型
-                    <select
-                      value={draft.kind}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          kind: e.target.value as Signal["kind"],
-                        })
-                      }
-                    >
-                      {["采购意向", "招标公告", "公开动态", "中标结果"].map(
-                        (k) => (
-                          <option key={k}>{k}</option>
-                        ),
-                      )}
-                    </select>
-                  </label>
-                  <label>
-                    需求原文摘录
-                    <textarea
-                      required
-                      maxLength={10000}
-                      rows={6}
-                      value={draft.text}
-                      onChange={(e) =>
-                        setDraft({ ...draft, text: e.target.value })
-                      }
-                      placeholder="保留实际需求，不添加原文中未披露的信息"
-                    />
-                  </label>
-                  <button className="g-btn primary">
-                    导入并匹配 <Sparkles size={16} />
-                  </button>
-                  <p className="g-footnote">
-                    导入不自动认定主体关系、投标资格或真实需求。
-                  </p>
-                </form>
-              </>
-            )}
-          </section>
-        </div>
-      )}
       {toast && (
         <div className="g-toast" role="status">
           {toast}
