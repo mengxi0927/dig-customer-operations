@@ -1,9 +1,11 @@
 import type { DigAccount } from './dig-types';
 
+const shanghaiMonth = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit',
+});
+
 export function customerAssetTrend(customers: DigAccount[], months: number, now = new Date()) {
-  const monthKey = (date: Date) => new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit',
-  }).format(date);
+  const monthKey = shanghaiMonth.format;
   const current = monthKey(now);
   const dates = customers.flatMap(c => {
     if (!c.appliedAt) return [];

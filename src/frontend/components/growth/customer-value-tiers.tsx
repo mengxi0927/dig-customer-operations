@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import RollingNumber from "./rolling-number";
 import { ArrowUpRight, BadgeCheck, FolderOpen, ListFilter, Radar, Search, ShieldCheck, Target, TrendingUp } from "lucide-react";
 import type { DigAccount, DigOpportunity } from "@/lib/dig-types";
 import type { Candidate } from "@/lib/growth-engine";
@@ -47,9 +48,9 @@ export default function CustomerValueTiers({
     heading.focus({ preventScroll: true });
     if (reducedMotion) return;
     const pulse = heading.animate([
-      { backgroundColor: "transparent" },
-      { backgroundColor: tier === 1 ? "var(--glass-rose)" : "var(--glass-blue)" },
-      { backgroundColor: "transparent" },
+      { color: "var(--ink)" },
+      { color: "#3767a5" },
+      { color: "var(--ink)" },
     ], { duration: 500, iterations: 2, easing: "ease-in-out" });
     return () => pulse.cancel();
   }, [jump, tier]);
@@ -112,7 +113,7 @@ export default function CustomerValueTiers({
         {metrics.map(({ label, count, detail, icon: Icon, highlight }) => (
           <article key={label} className={highlight ? "g-metric-highlight" : undefined}>
             <div><span>{label}</span><Icon size={17} /></div>
-            <strong>{available ? count.toLocaleString("zh-CN") : "—"}</strong>
+            <strong><RollingNumber value={available ? count.toLocaleString("zh-CN") : "—"} /></strong>
             <small>{detail}</small>
           </article>
         ))}
@@ -137,7 +138,7 @@ export default function CustomerValueTiers({
                   onClick={() => selectTier(index)}
                 >
                   <span>{label}<ArrowUpRight size={15} /></span>
-                  <strong>{available ? counts[index].toLocaleString("zh-CN") : "—"}<small> 家</small></strong>
+                  <strong><RollingNumber value={available ? counts[index].toLocaleString("zh-CN") : "—"} /><small> 家</small></strong>
                   <p>{action}</p>
                 </button>
               ))}

@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useMemo,useRef,useState} from 'react';
+import RollingNumber from "./rolling-number";
 import {ArrowUpRight,BookOpen,ChevronDown,RefreshCw,Search,ListChecks,CheckCircle2,Info} from 'lucide-react';
 import type {DigAccount,DigOpportunity} from '@/lib/dig-types';
 import type {Signal} from '@/lib/growth-engine';
@@ -50,7 +51,7 @@ function OpportunityCard({ recommendation: r, progress, update, openCustomer }: 
         <summary>
           <BookOpen size={15} aria-hidden="true" />
           <span>推荐依据{r.matches.length > 0 && '与标杆案例'}</span>
-          {r.matches.length > 0 && <small>{r.matches.length} 个案例</small>}
+          {r.matches.length > 0 && <small><RollingNumber value={r.matches.length} /> 个案例</small>}
           <ChevronDown size={15} aria-hidden="true" />
         </summary>
         <div className="og-evidence">
@@ -129,7 +130,7 @@ export default function OpportunityGrowth({customers,opportunities,signals,onCus
          ['跟进中', recommendations.filter(r => progress[r.id]?.state === '跟进中').length],
        ].map(([label, value]) => <div key={label}>
          <span>{label}</span>
-         <strong>{loading && label === '已接入标杆案例' ? '…' : error && label === '已接入标杆案例' ? '—' : value}</strong>
+         <strong><RollingNumber value={loading && label === '已接入标杆案例' ? '…' : error && label === '已接入标杆案例' ? '—' : value} ready={!loading} /></strong>
        </div>)}
      </div>
      {error && <div className="og-notice" role="alert">
@@ -151,9 +152,9 @@ export default function OpportunityGrowth({customers,opportunities,signals,onCus
              onClick={() => {
                if (t !== tab) fadeSwap(listContent.current, () => { setTab(t); setPage(1); });
              }}>
-             {t}<span>{recommendations.filter(r =>
+             {t}<span className="og-tab-count"><RollingNumber ready={!loading} value={recommendations.filter(r =>
                (t === '优先跟进' || r.kind === t) && (showDeferred || progress[r.id]?.state !== '暂不跟进')
-             ).length}</span>
+             ).length} /></span>
            </button>)}
          </div>
          <div className="og-filters">

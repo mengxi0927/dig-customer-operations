@@ -1,3 +1,41 @@
+.g-roll-number {
+  position: relative;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: normal;
+  white-space: nowrap;
+}
+.g-roll-number i { font-style: normal; }
+.g-roll-reels {
+  position: absolute;
+  inset: 0;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+.g-roll-digit {
+  width: 1ch;
+  height: 1lh;
+  overflow: hidden;
+}
+.g-roll-digit::before {
+  display: block;
+  content: var(--roll-strip);
+  white-space: pre;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .growth-app[data-scroll-motion] .g-roll-number[data-roll-play] .g-roll-value {
+    animation: g-roll-reveal 730ms step-end both;
+  }
+  .growth-app[data-scroll-motion] .g-roll-number[data-roll-play] .g-roll-reels { display: flex; }
+  .growth-app[data-scroll-motion] .g-roll-number[data-roll-play] .g-roll-digit::before {
+    animation: g-roll-digit 570ms cubic-bezier(.12, .66, .23, 1) var(--roll-delay) both;
+  }
+  @keyframes g-roll-reveal { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes g-roll-digit { to { transform: translateY(calc(-1lh * var(--roll-steps))); } }
+}
+
 .growth-app[data-scroll-motion] :is(.g-card, .g-metrics > article, .og-metrics > div, .og-card, .g-panel):not([data-in-view="true"], :focus-visible, :has(:focus-visible)) {
   opacity: .78;
   transform: translateY(-12px);
@@ -47,4 +85,23 @@
   .growth-app[data-scroll-motion] .asset-donut[data-populated]:not([data-in-view="true"]) svg { --asset-ring-angle: 0deg; }
   .growth-app[data-scroll-motion] .asset-donut[data-in-view] svg { transition: --asset-ring-angle .67s ease-in-out; }
   .growth-app[data-scroll-motion] .asset-donut:has(:focus-visible) svg { mask-image: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .g-workspace-surface[data-workspace-motion="leave"] { animation: g-workspace-out 75ms ease-in both; }
+  .g-workspace-surface[data-workspace-motion="enter"] { animation: g-workspace-in 240ms cubic-bezier(.2, .75, .25, 1) both; }
+  @keyframes g-workspace-out { to { opacity: .62; } }
+  @keyframes g-workspace-in { from { opacity: .62; } }
+}
+@media (min-width: 951px) and (prefers-reduced-motion: no-preference) {
+  .g-workspace-surface :is(.asset-level-structure, .g-value-columns > section, .og-list, .g-form-card) { --workspace-slide: -10px; }
+  .g-workspace-surface :is(.asset-trend, .g-tier-guide, .og-context, .g-result) { --workspace-slide: 10px; }
+  .g-workspace-surface[data-workspace-motion="leave"] :is(.asset-level-structure, .asset-trend, .g-value-columns > section, .g-tier-guide, .og-list, .og-context, .g-form-card, .g-result)[data-in-view="true"] {
+    animation: g-workspace-part-out 75ms ease-in both;
+  }
+  .g-workspace-surface[data-workspace-motion="enter"] :is(.asset-level-structure, .asset-trend, .g-value-columns > section, .g-tier-guide, .og-list, .og-context, .g-form-card, .g-result)[data-in-view="true"] {
+    animation: g-workspace-part-in 240ms cubic-bezier(.2, .75, .25, 1) both;
+  }
+  @keyframes g-workspace-part-out { to { translate: var(--workspace-slide); } }
+  @keyframes g-workspace-part-in { from { translate: calc(-1 * var(--workspace-slide)); } }
 }

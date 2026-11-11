@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import RollingNumber from "./rolling-number";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
   Building2,
@@ -20,7 +21,7 @@ import "./customer-assets.css";
 import Dropdown from "./dropdown";
 import CustomerLevelChart from "./customer-level-chart";
 import CustomerGrowthTrend from "./customer-growth-trend";
-import CustomerAssetFilters, { emptyAssetFilters, type AssetFilters } from "./customer-asset-filters";
+import CustomerAssetFilters, { emptyAssetFilters, type AssetFilterOptions, type AssetFilterSelection, type AssetFilters } from "./customer-asset-filters";
 import SalesContactAvatars from "./sales-contact-avatars";
 import { fadeSwap } from "./fade-swap";
 import { tableBadgeColor } from "./table-badge-color";
@@ -29,7 +30,7 @@ import { customerAssetTrend, customersAddedInYear } from "@/lib/customer-asset-t
 const mapping = cityProvince as Record<string, string>;
 const provinceNames = [...new Set(Object.values(mapping).filter(Boolean))];
 const filterOptions = (values: string[]) => [...new Set(values)].filter(Boolean).sort((a, b) => a.localeCompare(b, "zh-CN"));
-const matchesFilter = (chosen: string[], values: string[]) => !chosen.length || values.some(value => chosen.includes(value));
+const matchesFilter = (chosen: AssetFilterSelection, values: string[]) => !chosen?.length || values.some(value => chosen.includes(value));
 const levelPalette = new Map([
   ["核心客户", "var(--palette-blue)"],
   ["潜力客户", "var(--palette-red)"],
@@ -111,7 +112,7 @@ export default function CustomerAssets({
       ),
     );
   const departments = (c: DigAccount) => customerMarketingUnits(linked.get(c.id) || []);
-  const options: AssetFilters = {
+  const options: AssetFilterOptions = {
     department: filterOptions([
       ...opportunities.flatMap(o => o.marketingUnits || []),
       ...(customers.some(c => !departments(c).length) ? ["营销单元未关联"] : []),
@@ -122,11 +123,11 @@ export default function CustomerAssets({
     level: filterOptions(customers.map(c => c.level || "级别未填写")),
   };
   const filtered = customers.filter(c => {
-    const units = filters.department.length ? departments(c) : [];
+    const units = filters.department?.length ? departments(c) : [];
     return matchesFilter(filters.department, units.length ? units : ["营销单元未关联"])
-      && (!filters.owner.length || matchesFilter(filters.owner, owners(c)))
+      && (!filters.owner?.length || matchesFilter(filters.owner, owners(c)))
       && matchesFilter(filters.industry, [c.industry || "行业未填写"])
-      && (!filters.region.length || filters.region.includes(customerProvince(c.city)))
+      && (!filters.region?.length || filters.region.includes(customerProvince(c.city)))
       && matchesFilter(filters.level, [c.level || "级别未填写"]);
   });
   const regions = counts(filtered.map((c) => customerProvince(c.city))),
@@ -191,10 +192,9 @@ export default function CustomerAssets({
                 }}
               />
             </i>
-            <b>{n}</b>
+            <b><RollingNumber value={n} /></b>
             <small>
-              {filtered.length ? ((n / filtered.length) * 100).toFixed(1) : "0"}
-              %
+              <RollingNumber value={filtered.length ? ((n / filtered.length) * 100).toFixed(1) : "0"} />%
             </small>
           </button>
         ))}
@@ -256,7 +256,7 @@ export default function CustomerAssets({
                 <span>{label}</span>
                 <Icon size={16} aria-hidden="true" />
               </div>
-              <strong>{value}</strong>
+              <strong><RollingNumber value={value} ready={!loading} /></strong>
               <small>{sub}</small>
             </article>
           ))}
@@ -338,11 +338,11 @@ export default function CustomerAssets({
                       <div className="asset-region-metrics">
                         <div>
                           <small>客户数量</small>
-                          <b>{regional.length}</b>
+                          <b><RollingNumber value={regional.length} /></b>
                         </div>
                         <div>
                           <small>关联销售员</small>
-                          <b>{reps.length}</b>
+                          <b><RollingNumber value={reps.length} /></b>
                         </div>
                       </div>
                       <div className="asset-region-divider" aria-hidden="true"><span>·</span></div>
@@ -364,7 +364,7 @@ export default function CustomerAssets({
                               }}
                             >
                               <span>{name}</span>
-                              <small>{n} 家</small>
+                              <small><RollingNumber value={n} /> 家</small>
                             </button>
                           ))}
                           {!reps.length && <p className="asset-empty">暂无已关联商机的销售员信息</p>}
@@ -425,9 +425,9 @@ export default function CustomerAssets({
               <div className="g-card-heading asset-distribution-heading">
                 <div><h3>客户行业分布</h3><p>客户数量 Top 10 · 点击行业联动筛选</p></div>
               </div>
-              {renderBars(industries, filters.industry, name => updateFilters({
+              {renderBars(industries, filters.industry ?? [], name => updateFilters({
                 ...filters,
-                industry: filters.industry.includes(name) ? filters.industry.filter(item => item !== name) : [name],
+                industry: filters.industry?.includes(name) ? filters.industry.filter(item => item !== name) : [name],
               }))}
             </Tabs.Content>
             <Tabs.Content value="region">
@@ -440,10 +440,10 @@ export default function CustomerAssets({
         </Tabs.Root>
       </section>
       <section id="asset-customer-list" tabIndex={-1} className="g-card asset-all-customers" aria-labelledby="asset-customer-heading">
-        <div className="g-card-heading"><div><h2 id="asset-customer-heading">全部客户</h2><p>当前筛选范围内共 {filtered.length} 家 · 点击客户名称查看合作档案</p></div></div>
+        <div className="g-card-heading"><div><h2 id="asset-customer-heading">全部客户</h2><p>当前筛选范围内共 <RollingNumber value={filtered.length} ready={!loading} /> 家 · 点击客户名称查看合作档案</p></div></div>
         <div className="asset-list-toolbar">
           <label className="g-search"><Search size={16} /><input aria-label="搜索全部客户" placeholder="搜索客户名称、编号、行业或销售员" value={listSearch} onChange={e => {setListSearch(e.target.value);setListPage(1);}} /></label>
-          <span>共 {listCustomers.length} 家客户</span>
+          <span>共 <RollingNumber value={listCustomers.length} ready={!loading} /> 家客户</span>
         </div>
         <div className="asset-table-scroll" ref={listContent}><table className="asset-table">
           <thead><tr>{["客户名称 / 编号", "行业", "地区", "客户级别", "关联销售员", "关联商机", "申请时间", "操作"].map(t => <th key={t}>{t}</th>)}</tr></thead>

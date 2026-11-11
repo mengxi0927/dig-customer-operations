@@ -5,6 +5,7 @@ const targets = [
   ".asset-table tbody tr", ".g-table tbody tr", ".asset-bars button", ".asset-legend button",
   ".asset-reps button", ".asset-customer-list button", ".og-empty", ".g-result-score",
   ".g-result-content", ".g-admission-loading", ".asset-trend-plot", ".asset-donut[data-populated]",
+  ".g-roll-number[data-roll-ready]:not([data-roll-done])",
 ].join(", ");
 
 export function useScrollMotion(root: RefObject<HTMLDivElement | null>) {
@@ -16,7 +17,15 @@ export function useScrollMotion(root: RefObject<HTMLDivElement | null>) {
     const observed = new Set<Element>();
     const viewport = new IntersectionObserver(entries => {
       for (const { target, isIntersecting } of entries) {
-        if (observed.has(target)) target.setAttribute("data-in-view", String(isIntersecting));
+        if (!observed.has(target)) continue;
+        if (target.classList.contains("g-roll-number")) {
+          if (!isIntersecting) continue;
+          target.setAttribute("data-roll-done", "");
+          target.setAttribute("data-roll-play", "");
+          unobserve(target);
+        } else {
+          target.setAttribute("data-in-view", String(isIntersecting));
+        }
       }
     }, { rootMargin: "-4px 0px -40px", threshold: 0 });
 
@@ -30,7 +39,7 @@ export function useScrollMotion(root: RefObject<HTMLDivElement | null>) {
       for (const record of records) {
         if (record.type === "attributes") {
           const target = record.target as Element;
-          if (target.hasAttribute("data-populated")) observe(target);
+          if (target.matches(targets)) observe(target);
           else unobserve(target);
           continue;
         }
@@ -58,13 +67,14 @@ export function useScrollMotion(root: RefObject<HTMLDivElement | null>) {
         changes.disconnect();
         viewport.disconnect();
         workspace.removeAttribute("data-scroll-motion");
+        workspace.querySelectorAll("[data-roll-play]").forEach(target => target.removeAttribute("data-roll-play"));
         observed.forEach(target => target.removeAttribute("data-in-view"));
         observed.clear();
         return;
       }
       workspace.setAttribute("data-scroll-motion", "");
       workspace.querySelectorAll(targets).forEach(observe);
-      changes.observe(workspace, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-populated"] });
+      changes.observe(workspace, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-populated", "data-roll-ready"] });
     }
 
     applyPreference();

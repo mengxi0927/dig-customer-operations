@@ -9,11 +9,14 @@ export const assetFilterGroups = [
   { id: "region", label: "地区" },
   { id: "level", label: "客户级别" },
 ] as const;
-export type AssetFilters = Record<(typeof assetFilterGroups)[number]["id"], string[]>;
+type AssetFilterId = (typeof assetFilterGroups)[number]["id"];
+export type AssetFilterSelection = string[] | null;
+export type AssetFilters = Record<AssetFilterId, AssetFilterSelection>;
+export type AssetFilterOptions = Record<AssetFilterId, string[]>;
 export const emptyAssetFilters: AssetFilters = { department: [], owner: [], industry: [], region: [], level: [] };
 
 export default function CustomerAssetFilters({ options, value, onChange, onReset }: {
-  options: AssetFilters;
+  options: AssetFilterOptions;
   value: AssetFilters;
   onChange: (value: AssetFilters) => void;
   onReset: () => void;
@@ -51,6 +54,12 @@ export default function CustomerAssetFilters({ options, value, onChange, onReset
     if (timer.current !== null) clearTimeout(timer.current);
   }, []);
 
+  function toggleAll(id: AssetFilterId) {
+    cancelClose();
+    setOpen(true);
+    onChange({ ...value, [id]: value[id] === null ? [] : null });
+  }
+
   return (
     <section className="asset-filters" aria-label="客户资产筛选" data-open={open}
       onPointerEnter={event => {
@@ -75,20 +84,26 @@ export default function CustomerAssetFilters({ options, value, onChange, onReset
         close();
       }}>
       <div className="asset-filter-top">
-        <button ref={trigger} type="button" className="asset-filter-trigger" aria-expanded={open} aria-controls={controlsId}
-          onClick={event => { if (open && (!pointerInside.current || event.detail === 0)) close(); else setOpen(true); }}>
-          <SlidersHorizontal size={17} aria-hidden="true" />
-          <span className="asset-filter-summary">
-            {assetFilterGroups.map(({ id, label }) => (
-              <span className="asset-filter-status" key={id} data-selected={value[id].length > 0}
-                title={value[id].length ? value[id].join("、") : undefined}>
+        <SlidersHorizontal className="asset-filter-icon" size={17} aria-hidden="true" />
+        <div className="asset-filter-summary">
+          {assetFilterGroups.map(({ id, label }) => {
+            const selected = value[id];
+            return (
+              <span className="asset-filter-status" key={id} data-selected={Boolean(selected?.length) || undefined}
+                title={selected?.length ? selected.join("、") : undefined}>
                 <span>{label}：</span>
                 <span className="asset-filter-values">
-                  {(value[id].length ? value[id] : ["全部"]).map(option => <b key={option}>{option}</b>)}
+                  {selected?.length
+                    ? selected.map(option => <b key={option}>{option}</b>)
+                    : <button type="button" aria-label={`${label}全部（筛选摘要）`} aria-pressed={selected === null}
+                        disabled={!options[id].length} onClick={() => toggleAll(id)}>全部</button>}
                 </span>
               </span>
-            ))}
-          </span>
+            );
+          })}
+        </div>
+        <button ref={trigger} type="button" className="asset-filter-trigger" aria-label="筛选选项" aria-expanded={open} aria-controls={controlsId}
+          onClick={event => { if (open && (!pointerInside.current || event.detail === 0)) close(); else setOpen(true); }}>
           <ChevronDown className="asset-filter-chevron" size={16} aria-hidden="true" />
         </button>
         <button type="button" className="g-btn asset-filter-reset" onClick={onReset}>
@@ -99,17 +114,21 @@ export default function CustomerAssetFilters({ options, value, onChange, onReset
         <div className="asset-filter-scroll">
           <div className="asset-filter-rack">
             {assetFilterGroups.map(({ id, label }, index) => {
-              const selected = value[id];
+              const all = value[id] === null;
+              const selected = value[id] ?? options[id];
               const next = assetFilterGroups[index + 1];
               return (
                 <Fragment key={id}>
-                  <fieldset className="asset-filter-group" aria-labelledby={`${controlsId}-${id}`} data-connected={selected.length > 0}>
+                  <fieldset className="asset-filter-group" aria-labelledby={`${controlsId}-${id}`}
+                    data-connected={!all && selected.length > 0 || undefined} data-all={all || undefined}>
                     <div className="asset-filter-group-head">
                       <strong id={`${controlsId}-${id}`}>{label}</strong>
-                      <button type="button" className="asset-filter-all" aria-label={`清除${label}筛选`}
-                        disabled={!selected.length} onClick={() => onChange({ ...value, [id]: [] })}>
-                        {selected.length ? `${selected.length} 项 · 清除` : "全部"}
-                      </button>
+                      <div className="asset-filter-group-actions">
+                        <button type="button" className="asset-filter-all" aria-label={`${label}全部`} aria-pressed={all}
+                          disabled={!options[id].length} onClick={() => toggleAll(id)}>全部</button>
+                        {!all && selected.length > 0 && <button type="button" className="asset-filter-clear" aria-label={`清除${label}筛选`}
+                          onClick={() => onChange({ ...value, [id]: [] })}>清除</button>}
+                      </div>
                     </div>
                     <div className="asset-filter-options">
                       {options[id].map(option => (
@@ -119,10 +138,10 @@ export default function CustomerAssetFilters({ options, value, onChange, onReset
                           <input type="checkbox" checked={selected.includes(option)}
                             onFocus={() => setFocusedOption({ group: index, name: option })}
                             onBlur={() => setFocusedOption(null)}
-                            onChange={event => onChange({
-                              ...value,
-                              [id]: event.currentTarget.checked ? [...selected, option] : selected.filter(item => item !== option),
-                            })} />
+                            onChange={event => {
+                              const updated = event.currentTarget.checked ? [...selected, option] : selected.filter(item => item !== option);
+                              onChange({ ...value, [id]: options[id].every(item => updated.includes(item)) ? null : updated });
+                            }} />
                           <span className="asset-filter-checkbox"><Check size={12} strokeWidth={2.5} aria-hidden="true" /></span>
                           <span>{option}</span>
                         </label>
@@ -130,7 +149,7 @@ export default function CustomerAssetFilters({ options, value, onChange, onReset
                       {!options[id].length && <span className="asset-filter-empty">暂无可选项</span>}
                     </div>
                   </fieldset>
-                  {next && <AssetFilterConnection left={selected} right={value[next.id]} highlight={
+                  {next && <AssetFilterConnection left={value[id]} right={value[next.id]} moving={open} highlight={
                     highlight?.group === index ? { side: "left", name: highlight.name }
                       : highlight?.group === index + 1 ? { side: "right", name: highlight.name } : null
                   } />}

@@ -14,6 +14,7 @@
   --text-body: 14px;
   --text-subtitle: 16px;
   --text-section: 19px;
+  --text-metric: clamp(27px, 3vw, 36px);
   --motion-duration: 500ms;
   --motion-ease: ease-in-out;
   --spring: cubic-bezier(.22, 1.35, .4, 1);
@@ -72,18 +73,11 @@
   inset: 0 auto 0 0;
   width: var(--rail);
   padding: 19px 0 16px 11px;
-  background: var(--glass);
-  backdrop-filter: var(--glass-filter);
+  background: linear-gradient(160deg, #f2f5fb, #e9eff8);
   color: var(--muted);
   border: 0;
   border-right: 1px solid var(--glass-edge);
   overflow: visible;
-  transition: width .29s var(--spring), background .2s ease, box-shadow .2s ease;
-}
-.growth-app .g-sidebar:is(:hover, :has(:focus-visible)) {
-  width: 218px;
-  background: var(--glass-raised);
-  box-shadow: var(--glass-shadow);
 }
 .growth-app .g-sidebar nav { gap: 9px; grid-template-columns: minmax(0, 1fr); }
 .growth-app .g-sidebar :is(nav button, .g-sidebar-bottom a) {
@@ -102,9 +96,21 @@
 }
 .growth-app .g-sidebar-bottom { margin-right: 11px; padding: 10px 0 0; border-top: 1px solid #ccd7e6; }
 .growth-app .g-sidebar-bottom a { padding-left: 14px; }
-.g-nav-text { display: flex; gap: 6px; align-items: center; max-width: 0; overflow: hidden; opacity: 0; transition: opacity .15s ease; }
-.growth-app .g-sidebar:is(:hover, :has(:focus-visible)) .g-nav-text { opacity: 1; max-width: 150px; }
+.g-nav-text { display: flex; gap: 6px; align-items: center; opacity: 0; transition: opacity .16s ease-out; }
+.growth-app .g-sidebar:is(:hover, :has(:focus-visible)) .g-nav-text { opacity: 1; }
 @media (min-width: 701px) {
+  .growth-app .g-sidebar {
+    --sidebar-width: 218px;
+    --sidebar-fold: calc(var(--sidebar-width) - var(--rail));
+    width: var(--sidebar-width);
+    clip-path: inset(0 var(--sidebar-fold) 0 0);
+    transition: clip-path .24s cubic-bezier(.2, .75, .25, 1);
+  }
+  .growth-app .g-sidebar:is(:hover, :has(:focus-visible)) { clip-path: inset(0); }
+  .growth-app .g-sidebar nav button.active::before,
+  .growth-app .g-sidebar nav button.active::after { right: var(--sidebar-fold); }
+  .growth-app .g-sidebar:is(:hover, :has(:focus-visible)) nav button.active::before,
+  .growth-app .g-sidebar:is(:hover, :has(:focus-visible)) nav button.active::after { right: 0; }
   .g-sidebar nav button.active::before,
   .g-sidebar nav button.active::after {
     content: ""; position: absolute; right: 0; width: 8px; height: 8px; pointer-events: none;
@@ -175,7 +181,12 @@
 }
 .growth-app .g-metrics article > div { gap: 8px; font-size: var(--text-label); color: var(--muted); font-weight: 650; }
 .growth-app .g-metrics svg { color: #6582ab; }
-.growth-app :is(.g-metrics strong, .og-metrics strong) { font-size: clamp(27px, 3vw, 36px); line-height: 1.2; margin: 6px 0 4px; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.growth-app :is(.g-metrics strong, .og-metrics strong, .g-matrix strong, .g-result-score strong, .gp-score > strong) {
+  font-size: var(--text-metric);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.growth-app :is(.g-metrics strong, .og-metrics strong) { margin: 6px 0 4px; color: var(--ink); font-weight: 700; }
 .growth-app .g-metrics small { display: block; color: var(--muted); font-size: var(--text-meta); font-weight: 400; }
 .growth-app .g-card {
   min-width: 0; margin-bottom: 19px; border: 1px solid var(--glass-edge); border-radius: var(--radius-card);
@@ -271,8 +282,7 @@
 .growth-app .g-matrix button:focus-visible { outline-offset: -4px; }
 .growth-app .g-matrix button svg { transition: transform var(--motion-duration) var(--motion-ease), scale var(--motion-duration) var(--motion-ease); }
 .growth-app .g-matrix button:hover svg { transform: translate(2px, -2px); }
-.growth-app .g-matrix span { gap: 4px; font-size: 14px; font-weight: 650; }
-.growth-app .g-matrix strong { font-size: 29px; line-height: 1.3; }
+.growth-app .g-matrix button > span { gap: 4px; font-size: 14px; font-weight: 650; }
 .growth-app .g-matrix :is(small, p) { color: var(--muted); font-size: 12px; }
 .growth-app :is(.g-axis-y, .g-axis-x) { font-size: 12px; color: var(--muted); }
 .growth-app .g-tier-tag.tier-1 { background: #e2ebfa; }
@@ -376,7 +386,7 @@
   to { opacity: 1; transform: none; }
 }
 .growth-app :is(.g-process, .g-empty, .g-result-content, .g-footer) { color: var(--muted); }
-.growth-app :is(.g-process span, .g-reason, .g-empty p, .g-footer) { font-size: 13px; }
+.growth-app :is(.g-process > span, .g-reason, .g-empty p, .g-footer) { font-size: 13px; }
 .growth-app .g-process b { background: #e4ecf8; color: var(--blue-ink); }
 .growth-app .g-admission-loading { background: var(--glass-soft); border-color: var(--glass-edge); }
 .growth-app .g-result-score { background: var(--glass-rose); color: var(--risk-ink); border-radius: var(--radius-card); }
@@ -394,7 +404,7 @@
 
 .growth-app .og-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .growth-app .og-metrics > div { gap: 4px; }
-.growth-app .og-metrics span { color: var(--muted); font-size: var(--text-label); font-weight: 650; }
+.growth-app .og-metrics > div > span { color: var(--muted); font-size: var(--text-label); font-weight: 650; }
 .og-layout { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(245px, 1fr); gap: 18px; align-items: start; }
 .growth-app .og-list { container: opportunity-list / inline-size; }
 .growth-app .og-context {
@@ -492,7 +502,10 @@
 .growth-app .og-case .og-case-request:hover { background: color-mix(in srgb, var(--blue-ink) 88%, var(--ink)); }
 .growth-app .og-actions { gap: 6px; margin-top: 12px; }
 .growth-app .og-actions button { min-height: 30px; padding: 5px 8px; font-size: var(--text-meta); }
-.growth-app .og-actions .og-start { position: relative; gap: 0; transition: scale .3s var(--spring), background .2s ease, box-shadow .2s ease; }
+.growth-app .og-actions .og-start {
+  position: relative; gap: 0;
+  transition: scale .3s var(--spring), background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+}
 .og-start-emoji {
   width: 0;
   overflow: hidden;
@@ -505,8 +518,11 @@
 }
 .growth-app .og-actions .og-start:is(:hover, :focus-visible) {
   z-index: 1;
-  background: var(--action-hover);
-  box-shadow: 0 4px 11px rgb(34 55 83 / 20%);
+  background-color: #315a91;
+  border-color: #315a91;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 11px rgb(49 90 145 / 32%);
 }
 .og-start:is(:hover, :focus-visible) .og-start-emoji { width: 22px; opacity: 1; scale: 1; }
 @media (prefers-reduced-motion: no-preference) {
@@ -537,7 +553,7 @@
   transition: color .16s ease, background .18s ease, box-shadow .18s ease, transform .24s var(--spring);
 }
 .growth-app :is(.g-text, .asset-customer-name, .og-customer):not(:disabled):hover { color: #234771; }
-.growth-app :is(.g-related, .gp-nav a, .og-actions button, .asset-bars button, .asset-customer-list button):not(:disabled):hover { background-color: var(--glass-blue); }
+.growth-app :is(.g-related, .gp-nav a, .og-actions button, .asset-bars button, .asset-customer-list button):not(:disabled):where(:not(.og-start)):hover { background-color: var(--glass-blue); }
 .growth-app :is(.asset-table, .g-table) tbody tr { transition: background .16s ease; }
 .growth-app :is(.asset-table, .g-table) tbody tr:hover { background: #edf3fc; }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
@@ -566,7 +582,7 @@
 }
 @media (max-width: 700px) {
   .growth-app { --top: 54px; --mobile-nav-height: 63px; }
-  .growth-app .g-sidebar, .growth-app .g-sidebar:is(:hover, :has(:focus-visible)) {
+  .growth-app .g-sidebar {
     position: static; width: 100%; padding: 9px 13px; border-right: 0; border-bottom: 1px solid var(--line);
     background: var(--glass); box-shadow: none;
   }

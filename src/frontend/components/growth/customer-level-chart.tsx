@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type FocusEvent, type PointerEvent } from "react";
+import RollingNumber from "./rolling-number";
 
 type Level = { name: string; count: number; color: string };
 
@@ -89,7 +90,7 @@ export default function CustomerLevelChart({
           })}
         </svg>
         <div className="asset-donut-center">
-          <strong>{loading ? "—" : total.toLocaleString("zh-CN")}</strong>
+          <strong><RollingNumber value={loading ? "—" : total.toLocaleString("zh-CN")} /></strong>
           <small>{active ? `${active.name} · ${((active.count / total) * 100).toFixed(1)}%` : "家客户"}</small>
         </div>
       </div>
@@ -101,8 +102,8 @@ export default function CustomerLevelChart({
             <button key={name} type="button" style={{ "--level-color": color } as CSSProperties} {...interaction(name)}>
               <i aria-hidden="true" />
               <span>{name}</span>
-              <b>{count.toLocaleString("zh-CN")}</b>
-              <small>{((count / total) * 100).toFixed(1)}%</small>
+              <b><RollingNumber value={count.toLocaleString("zh-CN")} /></b>
+              <small><RollingNumber value={((count / total) * 100).toFixed(1)} />%</small>
             </button>
           ))}
           {!levels.length && <p className="asset-empty">{loading ? "正在读取级别…" : "当前筛选无客户"}</p>}

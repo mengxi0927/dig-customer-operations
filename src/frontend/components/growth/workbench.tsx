@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import RollingNumber from "./rolling-number";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
   ArrowUpRight,
@@ -401,14 +402,12 @@ export default function GrowthWorkbench() {
       (!query || [s.customer, s.title, s.text].some((v) => v.includes(query))),
   );
   function go(v: View) {
-    switchWorkspace(viewContent.current, () => {
+    switchWorkspace(viewContent.current, v === view ? null : () => {
       setView(v);
       setQuery("");
-      if (v !== view) {
-        setPanelTrail([]);
-        returnFocus.current = null;
-        window.scrollTo({ top: 0, behavior: "instant" });
-      }
+      setPanelTrail([]);
+      returnFocus.current = null;
+      window.scrollTo({ top: 0, behavior: "instant" });
     });
   }
   async function check(e: React.FormEvent) {
@@ -886,7 +885,7 @@ export default function GrowthWorkbench() {
           onBack={panelTrail.length > 1 ? () => setPanelTrail((trail) => trail.slice(0, -1)) : undefined}
         >
         <main className="g-main">
-          <div ref={viewContent}>
+          <div className="g-workspace-surface" ref={viewContent}>
           <div className="g-heading">
             <div>
               <h1>{currentNav.label}</h1>
@@ -927,7 +926,7 @@ export default function GrowthWorkbench() {
                   <button type="button" onClick={() => void refresh()}>重试</button>
                 </div>
               )}
-              <div ref={customerContent}>
+              <div className="g-workspace-surface" ref={customerContent}>
                 <Tabs.Content value="assets" forceMount hidden={customerTab !== "assets"}>
                   <CustomerAssets
                     customers={customers}
@@ -997,7 +996,7 @@ export default function GrowthWorkbench() {
                   <div className="g-process-space">
                     <div className="g-process" role="group" aria-label="客户核查步骤">
                       {["确认主体", "获取信息", "规则校验", "输出建议"].map(
-                        (step, index) => <span key={step}><b>{index + 1}</b>{step}</span>,
+                        (step, index) => <span key={step}><b><RollingNumber value={index + 1} /></b>{step}</span>,
                       )}
                     </div>
                   </div>
@@ -1027,7 +1026,7 @@ export default function GrowthWorkbench() {
                       className={`g-result-score ${admission.decision === "规则校验通过" || admission.demoCase === "pass" ? "good" : ""}`}
                     >
                       {admission.demoCase !== "existing" && <strong>
-                        {admission.score ?? "—"}
+                        <RollingNumber value={admission.score ?? "—"} />
                         <small>
                           {admission.score === null ? "待核实" : " / 100"}
                         </small>
@@ -1051,7 +1050,7 @@ export default function GrowthWorkbench() {
                             {r}
                           </div>
                         ))}
-                        {admission.dimensions && <div className="g-demo-dimensions">{admission.dimensions.map(([label, score, max]) => <div key={label}><span>{label}</span><b>{score} / {max}</b></div>)}</div>}
+                        {admission.dimensions && <div className="g-demo-dimensions">{admission.dimensions.map(([label, score, max]) => <div key={label}><span>{label}</span><b><RollingNumber value={score} /> / {max}</b></div>)}</div>}
                         {admission.demoCase === "existing" && <div className="g-admission-result-actions">{admission.existingCustomers?.map(c => <button key={c.id} className="g-btn" onClick={() => requestCustomerAccess(c)}>申请查看客户档案{admission.existingCustomers!.length > 1 ? `（${c.number || c.id}）` : ""} <ArrowUpRight size={14} /></button>)}</div>}
                         {admission.demoCase === "pass" && <div className="g-admission-result-actions"><a className="g-btn primary" href={CUSTOMER_CREATE_FORM} target="_blank" rel="noreferrer">开始填写新客户 <ArrowUpRight size={16} /></a><small>打开飞书建档表单，请在表单填写客户名称。</small></div>}
                         {admission.demoCase === "risk" && (
